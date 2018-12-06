@@ -5,5 +5,3 @@ The initial commit of this repository were the final materials used for the Fall
 The following year (this repo) I co-taught the course with Avalon Owens and we took a tidyverse-centric approach to introducing students to R.  Students were required to install R and RStudio as well as go through the DataCamp [Introduction to R](https://www.datacamp.com/courses/free-introduction-to-r) course before the first recitation.
 
 Feel free to fork and edit to use for your own course. If you notice mistakes or have suggestions for improvement, please file an issue.
-
-

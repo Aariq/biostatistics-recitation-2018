@@ -141,7 +141,7 @@
 
 <p>\(\bar{Y}\) = sample mean</p>
 
-<p>\(SE_\bar{Y}\) = sample SE</p>
+<p>\(SE_{\bar{Y}}\) = sample SE</p>
 
 </article></slide><slide class=""><hgroup><h2>One-sample t-test</h2></hgroup><article  id="one-sample-t-test-1">
 
@@ -354,9 +354,23 @@ str(beavers)</pre>
 
 </article></slide><slide class=""><hgroup><h2>Paired-sample t-test</h2></hgroup><article  id="paired-sample-t-test-1">
 
-<pre class = 'prettyprint lang-r'>t.test(beaver1$temp ~ beaver1$activ, paired = TRUE)</pre>
+<pre class = 'prettyprint lang-r'>head(beaver1, 4)</pre>
 
-<pre >## Error in complete.cases(x, y): not all arguments have the same length</pre>
+<pre >##   day time  temp activ
+## 1 346  840 36.33     0
+## 2 346  850 36.34     0
+## 3 346  900 36.35     0
+## 4 346  910 36.42     0</pre>
+
+<pre class = 'prettyprint lang-r'>head(beaver2, 4)</pre>
+
+<pre >##   day time  temp activ
+## 1 307  930 36.58     0
+## 2 307  940 36.73     0
+## 3 307  950 36.93     0
+## 4 307 1000 37.15     0</pre>
+
+<p>Are these data paired?</p>
 
 </article></slide><slide class=""><hgroup><h2>Paired-sample t-test</h2></hgroup><article  id="paired-sample-t-test-2">
 
@@ -364,11 +378,39 @@ str(beavers)</pre>
 
 <pre >## Error in complete.cases(x, y): not all arguments have the same length</pre>
 
-</article></slide><slide class=""><hgroup><h2>Paired data for today</h2></hgroup><article  id="paired-data-for-today">
+</article></slide><slide class=""><hgroup><h2>Paired-sample t-test</h2></hgroup><article  id="paired-sample-t-test-3">
+
+<pre class = 'prettyprint lang-r'>head(beaver1, 4)</pre>
+
+<pre >##   day time  temp activ
+## 1 346  840 36.33     0
+## 2 346  850 36.34     0
+## 3 346  900 36.35     0
+## 4 346  910 36.42     0</pre>
+
+<pre class = 'prettyprint lang-r'>tail(beaver1, 4)</pre>
+
+<pre >##     day time  temp activ
+## 111 347  310 36.88     0
+## 112 347  320 36.93     0
+## 113 347  330 36.97     0
+## 114 347  340 37.15     1</pre>
+
+<p>Are these data paired?</p>
+
+</article></slide><slide class=""><hgroup><h2>Paired-sample t-test</h2></hgroup><article  id="paired-sample-t-test-4">
+
+<pre class = 'prettyprint lang-r'>t.test(beaver1$temp ~ beaver1$activ, paired = TRUE)</pre>
+
+<pre >## Error in complete.cases(x, y): not all arguments have the same length</pre>
+
+<p>ALSO: The formula interface is ONLY FOR 2-sample t-tests</p>
+
+</article></slide><slide class=""><hgroup><h2>More data for today</h2></hgroup><article  id="more-data-for-today">
 
 <p><img src="horse.jpg" alt="Drawing" style="height: 447px;"/></p>
 
-</article></slide><slide class=""><hgroup><h2>Paired data for today</h2></hgroup><article  id="paired-data-for-today-1">
+</article></slide><slide class=""><hgroup><h2>More data for today</h2></hgroup><article  id="more-data-for-today-1">
 
 <pre class = 'prettyprint lang-r'>library(PairedData)
 data(HorseBeginners)
@@ -384,67 +426,9 @@ HorseBeginners</pre>
 ## 7      S7  69.57      5.68
 ## 8      S8  74.48     15.02</pre>
 
-</article></slide><slide class="segue dark nobackground level1"><hgroup class = 'auto-fadein'><h2>REVIEW PART 2: TIDY DATA</h2></hgroup><article  id="review-part-2-tidy-data">
+<p>Are these data paired?</p>
 
-</article></slide><slide class=""><hgroup><h2>REVIEW PART 2: TIDY DATA</h2></hgroup><article  id="review-part-2-tidy-data-1">
-
-<pre class = 'prettyprint lang-r'>horse_tidy &lt;- gather(HorseBeginners, 
-                     key = &quot;Status&quot;, value = &quot;Time&quot;)</pre>
-
-<pre >## Warning: attributes are not identical across measure variables;
-## they will be dropped</pre>
-
-</article></slide><slide class=""><hgroup><h2>REVIEW PART 2: TIDY DATA</h2></hgroup><article  id="review-part-2-tidy-data-2">
-
-<pre class = 'prettyprint lang-r'>horse_tidy</pre>
-
-<pre >##       Status  Time
-## 1    Subject    S1
-## 2    Subject    S2
-## 3    Subject    S3
-## 4    Subject    S4
-## 5    Subject    S5
-## 6    Subject    S6
-## 7    Subject    S7
-## 8    Subject    S8
-## 9     Actual 69.64
-## 10    Actual 62.26
-## 11    Actual 78.63
-## 12    Actual    76
-## 13    Actual  60.1
-## 14    Actual 68.51
-## 15    Actual 69.57
-## 16    Actual 74.48
-## 17 Imaginary 66.58
-## 18 Imaginary 25.59
-## 19 Imaginary 24.01
-## 20 Imaginary 38.35
-## 21 Imaginary 12.19
-## 22 Imaginary 34.25
-## 23 Imaginary  5.68
-## 24 Imaginary 15.02</pre>
-
-</article></slide><slide class=""><hgroup><h2>REVIEW PART 2: TIDY DATA</h2></hgroup><article  id="review-part-2-tidy-data-3">
-
-<pre class = 'prettyprint lang-r'>horse_tidy &lt;- gather(HorseBeginners, -Subject, 
-                     key = &quot;Status&quot;, value = &quot;Time&quot;)
-head(horse_tidy, 12)</pre>
-
-<pre >##    Subject    Status  Time
-## 1       S1    Actual 69.64
-## 2       S2    Actual 62.26
-## 3       S3    Actual 78.63
-## 4       S4    Actual 76.00
-## 5       S5    Actual 60.10
-## 6       S6    Actual 68.51
-## 7       S7    Actual 69.57
-## 8       S8    Actual 74.48
-## 9       S1 Imaginary 66.58
-## 10      S2 Imaginary 25.59
-## 11      S3 Imaginary 24.01
-## 12      S4 Imaginary 38.35</pre>
-
-</article></slide><slide class=""><hgroup><h2>Paired sample t-test</h2></hgroup><article  id="paired-sample-t-test-3">
+</article></slide><slide class=""><hgroup><h2>Paired sample t-test</h2></hgroup><article  id="paired-sample-t-test-5">
 
 <pre class = 'prettyprint lang-r'>t.test(HorseBeginners$Actual, HorseBeginners$Imaginary, paired = TRUE)</pre>
 
@@ -473,17 +457,69 @@ head(horse_tidy, 12)</pre>
 
 </article></slide><slide class=""><hgroup><h2>Plotting paired data with <code>ggplot2</code></h2></hgroup><article  id="plotting-paired-data-with-ggplot2-1">
 
+<pre class = 'prettyprint lang-r'>HorseBeginners</pre>
+
+<pre >##   Subject Actual Imaginary
+## 1      S1  69.64     66.58
+## 2      S2  62.26     25.59
+## 3      S3  78.63     24.01
+## 4      S4  76.00     38.35
+## 5      S5  60.10     12.19
+## 6      S6  68.51     34.25
+## 7      S7  69.57      5.68
+## 8      S8  74.48     15.02</pre>
+
+<p>Are these data tidy?</p>
+
+</article></slide><slide class="segue dark nobackground level1"><hgroup class = 'auto-fadein'><h2>REVIEW PART 2: TIDY DATA</h2></hgroup><article  id="review-part-2-tidy-data">
+
+</article></slide><slide class=""><hgroup><h2>REVIEW PART 2: TIDY DATA</h2></hgroup><article  id="review-part-2-tidy-data-1">
+
+<pre class = 'prettyprint lang-r'>horse_tidy &lt;- gather(HorseBeginners, 
+                     key = &quot;Status&quot;, value = &quot;Time&quot;)</pre>
+
+<pre >## Warning: attributes are not identical across measure variables;
+## they will be dropped</pre>
+
+</article></slide><slide class=""><hgroup><h2>REVIEW PART 2: TIDY DATA</h2></hgroup><article  id="review-part-2-tidy-data-2">
+
+<pre class = 'prettyprint lang-r'>head(horse_tidy, 14)</pre>
+
+<pre >##     Status  Time
+## 1  Subject    S1
+## 2  Subject    S2
+## 3  Subject    S3
+## 4  Subject    S4
+## 5  Subject    S5
+## 6  Subject    S6
+## 7  Subject    S7
+## 8  Subject    S8
+## 9   Actual 69.64
+## 10  Actual 62.26
+## 11  Actual 78.63
+## 12  Actual    76
+## 13  Actual  60.1
+## 14  Actual 68.51</pre>
+
+</article></slide><slide class=""><hgroup><h2>REVIEW PART 2: TIDY DATA</h2></hgroup><article  id="review-part-2-tidy-data-3">
+
 <pre class = 'prettyprint lang-r'>horse_tidy &lt;- gather(HorseBeginners, -Subject, 
                      key = &quot;Status&quot;, value = &quot;Time&quot;)
-head(horse_tidy)</pre>
+head(horse_tidy, 12)</pre>
 
-<pre >##   Subject Status  Time
-## 1      S1 Actual 69.64
-## 2      S2 Actual 62.26
-## 3      S3 Actual 78.63
-## 4      S4 Actual 76.00
-## 5      S5 Actual 60.10
-## 6      S6 Actual 68.51</pre>
+<pre >##    Subject    Status  Time
+## 1       S1    Actual 69.64
+## 2       S2    Actual 62.26
+## 3       S3    Actual 78.63
+## 4       S4    Actual 76.00
+## 5       S5    Actual 60.10
+## 6       S6    Actual 68.51
+## 7       S7    Actual 69.57
+## 8       S8    Actual 74.48
+## 9       S1 Imaginary 66.58
+## 10      S2 Imaginary 25.59
+## 11      S3 Imaginary 24.01
+## 12      S4 Imaginary 38.35</pre>
 
 </article></slide><slide class=""><hgroup><h2>Plotting paired data with <code>ggplot2</code></h2></hgroup><article  id="plotting-paired-data-with-ggplot2-2">
 

@@ -3,13 +3,11 @@ title: "Regression"
 author: "Avalon C.S. Owens, Eric R. Scott"
 date: "11/30/2018"
 output:
-  beamer_presentation: default
   ioslides_presentation:
     df_print: paged
     widescreen: yes
+  beamer_presentation: default
 ---
-
-
 ```{r include = F}
 library(tidyverse)
 library(ggthemes)

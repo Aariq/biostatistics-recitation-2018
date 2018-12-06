@@ -4,8 +4,8 @@ author: "Eric R. Scott, Avalon C.S. Owens"
 header-includes:
   - \usepackage{coloremoji}
 output:
-  pdf_document: default
   ioslides_presentation: default
+  pdf_document: default
 ---
 
 ```{r message=FALSE, warning=FALSE, include=FALSE}

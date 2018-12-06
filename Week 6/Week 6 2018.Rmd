@@ -3,8 +3,8 @@ title: "More fun with t-tests in R"
 author: "Avalon C.S. Owens, Eric R. Scott"
 date: "10/12/2018"
 output:
-  pdf_document: default
   ioslides_presentation: default
+  pdf_document: default
 ---
 ```{r include=FALSE}
 library(PairedData)

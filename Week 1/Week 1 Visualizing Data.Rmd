@@ -2,9 +2,9 @@
 title: "Welcome to Biostats Recitation!"
 author: "Eric R. Scott, Avalon Owens"
 output:
-  pdf_document: default
   ioslides_presentation:
     css: custom.css
+  pdf_document: default
 ---
 
 ## Information

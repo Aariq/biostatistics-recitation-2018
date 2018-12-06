@@ -3,9 +3,9 @@ title: "Power Analysis in R"
 author: "Avalon C.S. Owens, Eric R. Scott"
 date: "10/12/2018"
 output:
+  ioslides_presentation: default
   pdf_document: 
     latex_engine: xelatex
-  ioslides_presentation: default
 ---
 
 ```{r include=FALSE}

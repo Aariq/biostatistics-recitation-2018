@@ -3,10 +3,10 @@ title: 'Week 11: Correlations'
 author: "Avalon C.S. Owens, Eric R. Scott"
 date: "11/16/2018"
 output:
-  pdf_document: default
   ioslides_presentation:
     df_print: paged
     widescreen: yes
+  pdf_document: default
 ---
 ```{r include=FALSE}
 #required packages this week:
