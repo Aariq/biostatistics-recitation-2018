@@ -1,0 +1,230 @@
+---
+title: "Week 12 - Regression"
+output: html_notebook
+---
+
+Today, we're going to be introducing how to run a linear regression. We will be using the lions data which measured the proportion of black in a male lion's nose and the age of the lions. We want to know how proportion of the nose being black predicts age of lions. We will learn how to test assumptions for linear regression, write out linear equations, and plot model results. 
+
+
+```{r packages}
+library(ggplot2)
+library(ggformula)
+```
+
+
+# Load Data. 
+```{r Enter data}
+lion <- read.csv("LionAge.csv")
+head(lion)
+```
+
+# Correlation review.
+```{r}
+plot(age ~ proportion.black, data = lion, xlab = "Proportion Black on Nose", ylab = "Age")
+
+cor <- cor.test(lion$proportion.black, lion$age, method = "pearson")
+cor$estimate # Pearon correlation coefficient
+cor$estimate^2 # R-squared
+```
+
+# Linear regression.  
+Plotting, running model, checking assumptions, and assessing model fit. 
+
+## Run Model
+```{r Finding our model}
+m1 <- lm(age ~ proportion.black, data = lion) # lm stands for linear model, if proportion.black was a factor then it'd be running an ANOVA. 
+m1 # gives you the coefficients
+```
+## Plotting bivariate data with best fit line
+We've learned to make scatter plots before.  Now lets see how to add lines.
+
+```{r}
+plot(age ~ proportion.black, data = lion, xlab = "Proportion Black on Nose", ylab = "Age")
+abline(m1)
+
+# ggplot version
+ggplot(lion, aes(x = proportion.black, y = age)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = TRUE) # geom_smooth works for other models besides "lm", so you have to specify the method.  se = TRUE adds confidence bands.  Change it to FALSE if you just want a best-fit line
+```
+Note: The more complicated code Natalie showed in recitation for adding the line works for *any* kind of model, not just linear ones. This code is at the end of the notebook. But for linear models, the `abline()` shortcut is preferable.
+
+
+## Check assumptions with residuals
+
+### Residual plot
+```{r checking assumptions}
+# Save residuals to a column in original data frame for easy plotting
+lion$residuals <- m1$residuals
+mean(lion$residuals) # Mean of the residuals should be 0 (within rounding error)
+
+# Residuals plot
+plot(residuals ~ proportion.black, data = lion, pch = 19, xlab = "Proportion black", ylab = "Residuals")
+abline(h = 0, lty = 2) #adds a horizontal line
+
+# ggplot version
+ggplot(lion) +
+  geom_point(aes(x = proportion.black, y = residuals)) +
+  geom_hline(aes(yintercept = 0))
+```
+
+### Q-Q plot
+```{r}
+qqnorm(lion$residuals, datax = TRUE)
+qqline(lion$residuals, datax = TRUE)
+
+#ggplot way
+ggplot(lion, aes(sample = residuals)) +
+  geom_qq() +
+  stat_qqline() +
+  coord_flip()
+```
+
+### Other diagnostics
+
+Other diagnostic plots are available by just using `plot()` on your model object.  You are not responsible for knowing these, but they will be useful if you do linear regressions in the future.
+
+```{r}
+par(mfrow=c(2,2)) #par() sets up graphical parameters. mfrow sets up a grid, in this case 2 x 2
+plot(m1)  # 1. Residuals vs fitted - check to see if residuals are linear (and you can also check for homoscedasicity)
+          # 2. QQ plot - tests for normality 
+          # 3. Scale-location (OR residual plot) for homoscedasticity - horizontal line and equal spread. 
+          # 4. Residuals vs leverproportion.black - any influential outliers 
+
+# Find if their is a significant relationship between the variables 
+```
+## Hypothesis testing regressions
+The null hypothesis is that the slope is zero
+
+You can do this hypothesis testing two ways.  `anova()` gives you the ANOVA-like results
+
+```{r}
+anova(m1)
+```
+From this output you get an F statistic (49.751), a p-value (p < 0.0001), and df (1, 30).
+
+You can also get the t-test like results using `summary()`
+```{r}
+summary(m1) 
+            # coefficients and their significance, are they different from 0.
+            # R squared, and ajusted R-squared
+            # F statistic and p-value
+```
+This gives coefficient (estimate), a standard error, a t-value, and their significance (Pr(>|t|)).  This p-value tests whether the coefficient is significant from zero.  **NOTE** Ignore the intercept!  You almost never care about testing whether the intercept is different from zero.
+
+This output also gives the R squared value (Multiple R-squared) and a short version of the ANOVA like results.
+
+## Confidence intervals
+You can calculate 95% confidence intervals for the slope using `confint()`
+
+```{r}
+confint(m1)
+```
+These are the upper and lower bounds of the 95% confidence interval.  Again, you probably don't care about the intercept!
+
+
+# Exercise 1  
+  
+*Data*: Bees were captured at night time to uniquely tag individual workers and measure their body size, intertegular span (mm) and body weight (g). During the day, tagged bees were captured upon returning to the colony. Pollen was collected and bees were weighed. Nectar weights (g) were calculated by the change in weight from day to night time. 
+  
+*Instructions*:  
+  
+  1. Run a linear regression to investigate whether body size affects the nectar returns of worker bumble bees.  
+  2. Create a residual plot.  
+  3. Test other assumptions.  
+  4. Assess model fit, and write out equation using coefficients.  
+  5. Write summary statement.  
+
+
+```{r}
+resource <-readRDS("ResourceReturn.rds")
+plot(NectarW ~ ITS, data = resource)
+```
+## Diagnostic plots
+```{r}
+r1 <- lm(NectarW ~ ITS , data = resource)
+
+#extract residuals
+resource$residuals <- r1$residuals
+
+#residuals plot
+ggplot(resource) +
+  geom_point(aes(x = ITS, y = residuals)) +
+  geom_hline(aes(yintercept = 0))
+
+#qq plot of residuals
+ggplot(resource, aes(sample = residuals)) + #you can put the aes() inside ggplot() or inside the geom function
+  geom_qq() +
+  stat_qqline() +
+  coord_flip()
+```
+
+Tails look not great.  We could try a transformation.
+```{r}
+ggplot(resource, aes(x = NectarW)) +
+  geom_histogram(bins = 10)
+#looks leptokurtic
+
+#sqrt transformed nectar weights
+r2 <- lm(sqrt(NectarW + 1) ~ ITS , data = resource) # add a constant to eliminate negative values so sqrt() works
+resource$residuals2 <- r2$residuals
+
+ggplot(resource, aes(sample = residuals2)) + #you can put the aes() inside ggplot() or inside the geom function
+  geom_qq() +
+  stat_qqline() +
+  coord_flip()
+```
+Doesn't make much of a difference. Let's just move forward with the original model for now.
+
+```{r}
+anova(r1) # slope is significantly different from 0
+
+summary(r1) # does not explain a lot of the variation
+
+coef(r1) # coefficients/model parameters
+confint(r1) # confidence interval for these parameters
+```
+
+## Equation:  
+Use the coefficients from the model to write the linear equation.
+
+y = -0.0118 + 0.0107x
+
+*Summary statement*:   
+Nectar return increases significantly with body size (Linear regression, F(1,591) = 18.02, p < 0.0001).  
+Nectar return increases significantly with body size (Linear regression, t = 7.053, df = 591, p < 0.0001).
+
+# Exercise 2: Plotting model results 
+
+Plot the model output for the effect of ITS on nectar weights.
+
+```{r}
+#base R
+plot(NectarW ~ ITS, data = resource)
+abline(r1)
+
+#ggplot
+ggplot(resource, aes(x = ITS, y = NectarW)) +
+  geom_point() +
+  geom_smooth(method = "lm", color = "red") + #change the line color if you want!
+  theme_bw() #this just changes the background color from grey to white.
+```
+
+
+# Base R plotting of confidence bands and best-fit lines for ANY model.
+```{r Calculating our function and plotting }
+# Calculate predicted values
+prop.vals <- seq(min(lion$proportion.black), max(lion$proportion.black), 0.01) # create a vector of predictor values
+
+fun.lin <- coef(m1)[1] + coef(m1)[2]*prop.vals # calculate function from coefficients and predictor values
+
+pred.lin <- predict(m1, newdata = data.frame(proportion.black = prop.vals), interval="confidence") # gives you predicted values (as above in line 147) and the lower and upper confidence intervals
+
+# 1.1 Base R plotting using points() for line of best fit
+with(lion, 
+     plot(proportion.black, age, pch = 19, xlab = "Proportion black", ylab = "Age (years)"))
+points(prop.vals, fun.lin, type="l", lwd = 2) # line of best fit
+polygon(c(rev(prop.vals), prop.vals), # define x with x and reverse of x
+        c(rev(pred.lin[,2]), pred.lin[,3]),  # define y with y and reverse of y
+        border = NA, col = adjustcolor("grey40", alpha = 0.5))
+```

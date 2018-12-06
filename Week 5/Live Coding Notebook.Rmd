@@ -1,0 +1,108 @@
+---
+title: "Week 5 Live Coding Notebook"
+author: "Eric R. Scott"
+output: html_notebook
+---
+
+# Load necessary libraries
+```{r}
+library(dplyr)
+library(ggplot2)
+```
+
+
+# Make a bar plot with error bars!
+
+Let's use the chickwts dataset because it's familiar
+
+```{r}
+chickwts
+```
+
+
+
+## Make a summary table
+
+mean, sd, SEM, 95%CI
+
+```{r}
+chick.summary <- chickwts %>% 
+  group_by(feed) %>% 
+  summarize(mean.wt = mean(weight),
+            sd.wt = sd(weight),
+            count = n(),                          # n() only works inside summarize() and never takes any arguments
+            se.wt = sd(weight) / sqrt(count),     #I can use "count" because I created it in the previous line
+            ci.wt = qt(0.025, count - 1, lower.tail = FALSE) * se.wt)
+chick.summary
+```
+
+## Plot bars and error bars
+
+```{r}
+p <- 
+  #set up the aesthetics for the plot using the summary data
+  ggplot(chick.summary, aes(x = feed, y = mean.wt)) + 
+  geom_col() +                                           
+  geom_errorbar(aes(ymin = mean.wt - se.wt,
+                    ymax = mean.wt + se.wt,
+                    #`width` changes the width of the error bars
+                    width = 0.25)) +                     
+  labs(x = "Feed Type", y = "Chick Weight (g)")
+
+p
+```
+
+
+# Add jittered points
+
+Need to use *original* data for this
+
+```{r}
+#the `data` argument tells a geom_ to use a different dataset than the one in ggplot()
+p + geom_jitter(data = chickwts,
+                #you also have to re-define the aesthetics for the new data
+                aes(x = feed, y = weight), alpha = 0.5, width = 0.25)
+```
+
+
+
+# Do the WHOLE THING with the original data
+
+You can use `stat_summary()` to do it all with the original data.  This is a lot less coding, but it's less flexible and less intuitive.  Essentially, it does `summarize()` on your data and then passes it to a geom to plot it.  Specify how to summarize the data with `fun.y` or `fun.data` and specify the geom with `geom = `.
+
+```{r}
+ggplot(chickwts, aes(x = feed, y = weight)) +
+  stat_summary(geom = "col", fun.y = mean) +
+  stat_summary(geom = "errorbar", fun.data = mean_se, width = 0.25) +
+  labs(x = "Feed Type", y = "Chick Weight (g)")
+```
+
+
+**Back to slides**
+
+# Jitter plot with mean and error bars
+
+```{r}
+jp <- ggplot(chickwts, aes(x = feed, y = weight)) +
+  geom_jitter(width = 0.2, alpha = 0.6) +       #alpha changes transparency
+  geom_point(data = chick.summary, aes(x = feed, y = mean.wt),
+             color = "blue",
+             shape = 18,         #google "r plot shapes" to see all the possibiilties
+             size = 3) +
+  geom_errorbar(data = chick.summary,
+                aes(x = feed,
+                    ymin = mean.wt - ci.wt,
+                    ymax = mean.wt + ci.wt),
+                #without the next line, it tries to use the aesthetics from the original data
+                inherit.aes = FALSE,  
+                color = "blue", width = 0.25) +
+  labs(x = "Feed Type", y = "Chick Weight (g)")
+jp
+```
+
+# Oh, and if you want to angle the axis tick labels like I did in the slides...
+
+```{r}
+jp + theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+

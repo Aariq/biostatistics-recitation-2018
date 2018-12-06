@@ -1,0 +1,314 @@
+---
+title: "Standard Errors and Confidence Intervals"
+author: "Avalon C.S. Owens, Eric R. Scott"
+date: "9/24/2018"
+output: ioslides_presentation
+---
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(knitr)
+knitr::opts_chunk$set(error = TRUE)
+```
+
+## Plan for today
+- Calculating standard error in R
+- Writing your own function in R 
+- The t distribution (`qt()` and `pt()`)
+- Calculating confidence intervals in R
+- Plotting error bars with `ggplot2`
+
+## Calculating standard error in R
+
+```{r}
+head(diamonds, 10)
+```
+
+## Calculating standard error in R
+
+```{r}
+head(diamonds, 1)
+
+head(diamonds$price)
+
+tail(diamonds$price)
+```
+
+## Calculating standard error in R
+
+```{r}
+diamond_price <- diamonds$price
+
+sd(diamond_price)
+```
+
+## Calculating standard error in R
+
+```{r}
+diamond_price <- diamonds$price
+
+sd(diamond_price)
+
+se(diamond_price)
+```
+
+## Writing your own function in R
+
+- To calculate the **standard error of the mean**...
++ We need to take the sample standard deviation $s$
++ And divide by the square root of the sample number $n$
+
+$$SE = \frac{s}{\sqrt{n}}$$
+
+## Writing your own function in R
+
+- To calculate the **standard error of the mean**...
++ We need to take the sample standard deviation $s$
++ And divide by the square root of the sample number $n$
+
+```{r}
+36/2
+
+sqrt(4)
+
+36/sqrt(4)
+```
+
+## Writing your own function in R
+
+```{r message=FALSE}
+sd(diamond_price)
+```
+
+## Writing your own function in R
+
+```{r message=FALSE}
+sd(diamond_price)
+
+length(diamond_price)
+```
+
+## Writing your own function in R
+
+```{r message=FALSE}
+sd(diamond_price)
+
+length(diamond_price)
+
+sd(diamond_price)/sqrt(length(diamond_price))
+```
+
+## Writing your own function in R
+
+```{r}
+cheer_up <- function(x) {
+  print(paste("Wow,", x, "is so great!"))
+}
+
+cheer_up("Avalon")
+```
+
+## Writing your own function in R
+
+```{r}
+cheer_up <- function(x) {
+  print(paste("Wow,", x, "is so great!"))
+}
+
+cheer_up("Avalon")
+
+cheer_up("Eric")
+```
+
+## Writing your own function in R
+
+How would you write a function to calculate standard error?
+
+## Writing your own function in R
+
+```{r}
+se <- function(x) {
+  sd(x)/sqrt(length(x))
+}
+```
+
+## Writing your own function in R
+
+```{r}
+se <- function(x) {
+  sd(x)/sqrt(length(x))
+}
+
+se(diamond_price)
+```
+
+# Coding hack #1
+
+## Coding hack #1
+
+- Highlight a line of code and choose "Code > Extract Function"
+
+- It will turn it into a function for you!
+
+## The t-distribution
+
+```{r echo=FALSE}
+x <- seq(-4, 4, length=100)
+distributions <- data.frame(x = x, 
+                   t1 = dt(x,1),
+                   t3 = dt(x,2),
+                   t8 = dt(x,8),
+                   t30 = dt(x,30),
+                   normal = dnorm(x))
+distributions <- melt(distributions, id=c("x"))
+ggplot(distributions, aes(x = x, y = value, color = variable)) + 
+  geom_line(size = 0.75) + labs(x = "x", y = "Probability density") +
+  scale_color_discrete(name="", labels=c("1 df", "3 df", "8 df", "30 df","normal"))
+```
+
+## The t-distribution
+
+- All probability distributions in R have four related functions:
+    + A density function that starts with `d`
+    + A distribution function that starts with `p`
+    + A quantile function that starts with a `q`
+    + A random number function that starts with `r`
+
+## The `*binom()` family of functions
+
+- `dbinom()`, the density function --- $p[x = 5]$?
+- `pbinom()`, the distribution function --- $p[x \leq 5]$?
+- `qbinom()`, the quantile function --- $q[p = 0.62]$?
+- `rbinom()`, the random number generator
+
+## The `*norm()` family of functions
+
+- ~~`dnorm()`~~, the density function --- **don't use it!**
+- `pnorm()`, the distribution function --- $p[x > 1.64]$?
+- `qnorm()`, the quantile function --- $q[p = 0.05]$?
+- `rnorm()`, the random number generator
+
+## The `*t()` family of functions
+
+- `dt(x, df)`, the density function
+- `pt(q, df, lower.tail = T)`, the distribution function
+- `qt(p, df, lower.tail = T)`, the quantile function
+- `rt(n, df)`, the random number generator
+
+## Calculating confidence intervals in R
+
+$$\bar{Y} ± t_{\alpha,df}\textrm{SE}_{\bar{Y}}$$  
+&nbsp;
+$$\alpha = \frac{1-CI}{2}$$
+$$df = n - 1$$
+$$SE = \frac{s}{\sqrt{n}}$$
+
+## Calculating confidence intervals in R
+
+```{r}
+baby_snek = c(13, 15, 10, 17, 20, 9, 24, 18, 13, 12, 17, 16, 10, 21)
+length(baby_snek)
+t_snek <- qt(0.025, 14 - 1, lower.tail = F)
+SE_snek <- se(baby_snek)
+CI_snek <- t_snek*SE_snek
+x_snek <- mean(baby_snek)
+c(x_snek - CI_snek, x_snek + CI_snek)
+```
+
+## Calculating confidence intervals in R
+
+- Write a function that automatically calculates 95% CI!
+
+$$\bar{Y} ± t_{\alpha,df}\textrm{SE}_{\bar{Y}}$$  
+
+## Calculating confidence intervals in R
+
+- Write a function that automatically calculates 95% CI!
+
+```{r}
+CI <- function(x) {
+  t_x <- qt(0.025, length(x)-1, lower.tail=F)
+  SE_x <- sd(x)/sqrt(length(x))
+  c(mean(x) - t_x*SE_x, mean(x) + t_x*SE_x)
+}
+CI(baby_snek)
+```
+    
+## Plotting error bars with `ggplot2`
+
+<img src="diamond.jpg" alt="Drawing" style="height: 209px;"/> 
+
+## Plotting error bars with `ggplot2`
+
+```{r echo=FALSE}
+ggplot(diamonds, aes(x = color, y = price, fill = color)) +
+  stat_summary(geom = "bar", fun.y = mean, width = 0.75) +
+  stat_summary(geom = "errorbar", fun.data = mean_se, width = 0.25) +
+  labs(x = "Diamond color", y = "Diamond price ($)") +
+  theme_dark() + theme(legend.position="none") +
+  scale_fill_manual(values = c("#ffffff","#feffe5","#fdffcc","#fcffb3",
+                               "#fcff99","#fbff80","#faff66","#f9ff4d"))
+```
+
+## Plotting error bars with `ggplot2`
+
+```{r}
+caratcake <- diamonds %>%
+  group_by(color) %>%
+  summarize(dollarbills = mean(price),
+            dbills_SD = sd(price),
+            dbills_SE = se(price),
+            no_diamonds = length(price))
+caratcake
+```
+
+## Plotting error bars with `ggplot2`
+
+```{r}
+diagram <- ggplot(caratcake, aes(x = color, 
+                                 y = dollarbills, 
+                                 fill = color)) + 
+    geom_col(width = 0.75) +
+    geom_errorbar(aes(ymin = dollarbills - dbills_SE, 
+                      ymax = dollarbills + dbills_SE),
+                  width = 0.25) +
+    labs(x = "Diamond color", y = "Diamond price ($)")
+```
+
+## Plotting error bars with `ggplot2`
+
+```{r}
+diagram
+```
+
+## Plotting error bars with `ggplot2`
+
+```{r}
+caratcasserole <- diamonds %>%
+  group_by(color) %>%
+  summarize(dollarbills = mean(price),
+            dbills_CI = qt(0.925, length(price)-1)*sd(price)/sqrt(length(price)),
+            no_diamonds = length(price))
+caratcasserole
+```
+
+## Plotting error bars with `ggplot2`
+
+```{r}
+diagram2 <- ggplot(caratcasserole, aes(x = color, 
+                                      y = dollarbills, 
+                                      fill = color)) +
+    geom_col(width = 0.75) +
+    geom_errorbar(aes(ymin = dollarbills - dbills_CI, 
+                      ymax = dollarbills + dbills_CI),
+                  width = 0.25) +
+    labs(x = "Diamond color", y = "Diamond price ($)")
+```
+
+## Plotting error bars with `ggplot2`
+
+```{r}
+diagram2
+```
+

@@ -1,0 +1,285 @@
+---
+title: "Sampling and Summarizing Data"
+author: "Eric R. Scott, Avalon Owens"
+output:
+  ioslides_presentation:
+  pdf_document: default
+---
+
+## Notes to self:
+- students that decided to use R for repeated random samples in PS2 had a problem where the random samples were different when they knit to Word.  We could teach `set.seed()` or how to put R code inline.
+
+## Plan for today
+- Basic summary statistics 
+- Reading in data with `read.csv()`
+- Summarizing data with the `dplyr` package
+- Sampling with `sample()` and `sample_n()`
+- Making more cool plots with `ggplot2`
+
+## Basic summary statistics (review)
+
+```{r}
+class_size <- c(10, 14, 37, 23, 42, 300, 55, 9, 278, 7)
+mean(class_size)
+round(mean(class_size), digits = 0)
+```
+
+## Basic summary statistics (new)
+
+```{r}
+median(class_size) #median
+max(class_size) #maximum
+min(class_size) #minimum
+max(class_size) - min(class_size) #range
+```
+
+## Basic summary statistics (new)
+
+```{r}
+var(class_size) #variance
+sd(class_size) #standard deviation
+sd(class_size)^2 #also variance (I promise)
+```
+
+# But...
+
+# What if you want to summarize a huge data frame into a nice table of results? 
+
+# What if you want to calculate summary statistics for separate groups?
+    
+## Reading in data
+
+- Export your Excel spreadsheet to .csv
+- Put the .csv in same folder as your .Rmd
+- Read in data with `read.csv("name.csv")`
+- Assign this data frame to a variable
+- Give it a short, descriptive name!
+
+## Reading in data
+
+```{r}
+firefly <- read.csv("firefly_weight.csv")
+head(firefly)
+```
+
+## Reading in data
+
+```{r}
+firefly <- na.omit(firefly)
+head(firefly)
+```
+
+# Coding hack #1
+
+## Named and unnamed arguments
+
+- So far, we've been using named arguments for all functions:
+
+```{r}
+library(ggplot2)
+firefly_plot <- ggplot(### <b>
+data = firefly,
+### </b>
+                       aes(x = sex, y = weight))
+```
+
+- You don't have to name them (write `data = `) if you insert them into the function in the right order
+
+```{r}
+firefly_plot <- ggplot(firefly, aes(x = sex, y = weight))
+```
+
+- To figure out the right order, check the help file
+    
+## Summarizing data
+
+- We're going to use the `dplyr` package to summarize data
+
+`summarize(data, new_variable = function(variable))`
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+summarize(firefly, mean_weight = mean(weight))
+```
+
+## Summarizing data
+
+```{r}
+summarize(firefly,
+          mean = mean(weight),
+          median = median(weight),
+          range = max(weight) - min(weight),
+          variance = var(weight),
+          sd = sd(weight))
+```
+
+## Summarizing data by groups
+
+- Sometimes we want summary statistics for groups of data
+
+- Remember the faceted histograms we made last recitation?
+
+- Use `group_by()` to add an *invisible* grouping variable
+
+## Summarizing data by groups
+
+```{r}
+firefly_sex <- group_by(firefly, sex)
+
+summarize(firefly_sex,
+          mean = mean(weight),
+          median = median(weight),
+          range = max(weight) - min(weight),
+          variance = var(weight),
+          sd = sd(weight))
+```
+
+# Coding hack #2
+
+## The "pipe" (`%>%`)
+
+- Used in `dplyr` and many other Tidyverse packages
+- macOS shortcut: command + shift + m
+- Windows shortcut: control + shift + m
+- Allows you to "chain" functions together
+
+```{r}
+firefly %>%
+  group_by(sex) %>%
+  summarize(mean_weight = mean(weight))
+```
+
+## The "pipe" (`%>%`)
+
+- Using the pipe makes your code more readable to humans!
+
+```{r}
+firefly %>%
+  group_by(sex) %>%
+  summarize(mean_weight = mean(weight))
+```
+
+"Take the firefly dataset, group it by sex, then summarize it by taking the mean weight for each sex"
+
+## The "pipe" (`%>%`)
+
+- What it actually does is put whatever is on the left into the first argument of the function on the right
+
+```{r eval = FALSE}
+firefly %>% group_by(sex)
+# is the same as
+group_by(firefly, sex)
+```
+
+- Only works with functions that have `data` as first argument 
+  + (This is all Tidyverse functions, but not all base R functions)
+
+## Practice
+
+- Make this code more readable using ` %>% `
+
+```{r eval=FALSE}
+iris_grouped <- group_by(iris, Species)
+
+summarize(iris_grouped,
+          mean = mean(Sepal.Length),
+          median = median(Sepal.Length),
+          range = max(Sepal.Length) - min(Sepal.Length),
+          variance = var(Sepal.Length))
+```
+
+## Sampling
+
+- Randomly sampling from a vector is quite simple
+
+```{r}
+class_size
+sample(class_size, size = 3, replace = F)
+sample(class_size, 3, F)
+```
+
+## Sampling
+
+- Randomly sampling rows from a data frame is also easy!
+
+```{r}
+head(firefly)
+sample_n(firefly, size = 3, replace = F)
+sample_n(firefly, 3, F)
+```
+
+## Putting it all together
+
+"Take the iris dataset, randomly sample 30 rows, group the data by species, then summarize the sample by taking the mean and standard deviation of petal length for each species... 
+
+...and turn your random sample into a boxplot!"
+
+## Putting it all together
+
+```{r}
+iris_sample <- iris %>% 
+  sample_n(30, F)
+
+iris_summary <- iris_sample %>% 
+  group_by(Species) %>% 
+  summarize(petal_length = mean(Petal.Length),
+            sd_length = sd(Petal.Length))
+
+iris_summary
+```
+
+## Putting it all together
+
+```{r}
+ggplot(iris_sample, aes(x = Species, y = Petal.Length)) + 
+### <b>
+  geom_boxplot() +
+### </b>
+  labs(x = "Iris species", y = "Petal length (cm)")
+```
+
+## Making more cool plots
+
+```{r}
+ggplot(iris_sample, aes(x = Species, y = Petal.Length)) + 
+### <b>
+  geom_violin() +
+### </b>
+  labs(x = "Iris species", y = "Petal length (cm)")
+```
+
+## Making more cool plots
+
+```{r}
+ggplot(iris_sample, aes(x = Species, y = Petal.Length)) + 
+### <b>
+  geom_point() +
+### </b>
+  labs(x = "Iris species", y = "Petal length (cm)")
+```
+
+## Making more cool plots
+
+```{r}
+ggplot(iris_sample, aes(x = Species, y = Petal.Length)) + 
+### <b>
+  geom_jitter(width = 0.25, height = 0) +
+### </b>
+  labs(x = "Iris species", y = "Petal length (cm)")
+```
+
+## Making more cool plots
+
+```{r}
+ggplot(iris_sample, aes(x = Sepal.Length, y = Petal.Length)) + 
+### <b>
+  geom_point() +
+### </b>
+  labs(x = "Sepal length (cm)", y = "Petal length (cm)")
+```
+
+# Coding hack #3
+
+## Putting your name on your assignment
+
+- What to do with the YAML header?

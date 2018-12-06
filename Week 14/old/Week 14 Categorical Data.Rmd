@@ -1,0 +1,389 @@
+---
+title: 'Recitation week 14: Categorical Data Ideas'
+output:
+  html_document:
+    df_print: paged
+    toc: true
+    toc_float: true
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(knitr)
+library(tidyverse)
+opts_chunk$set(message=FALSE, warning=FALSE, #don't show messages or warnings
+               fig.width = 4.5, fig.height = 3.5) #set smaller default figure sizes
+```
+
+To Do:
+
+ - side-by-side and stacked bar plots in ggplot? (See deer example and soccer example from lecture. Makes sense for context 1 contingency analysis). Add at end.
+ - Odds ratio (I think reported by `g.test()` or `chisq.test()` maybe?)
+ 
+# Goodness of fit
+
+## Chi-square
+Using already tabulated data.  By default, the `chisq.test()` function wants observed values and expected probabilities.
+
+```{r, out.width="50%"}
+include_graphics("https://upload.wikimedia.org/wikipedia/commons/0/03/Figure_12_03_02.png")
+```
+
+```{r simple chi square}
+#Actual
+Obs <- c(yellowround = 93, yelowwrinkled = 28, greenround = 31, greenwrinkled = 8)
+
+#Expected probabilities
+Exp.p <- c(9/16, 3/16, 3/16, 1/16)
+chisq.test(Obs, p = Exp.p)
+```
+**NOTE:** You *must* used a named argument for `p =`! `chisq.test(Obs, p)` will give you **different results**.
+
+But you can also give it expected values or expected proportions if you include `rescale.p = TRUE`
+```{r chi square with expected numbers}
+#Expected values
+Exp <- c(yellowround = 90, yelowwrinkled = 30, greenround = 30, greenwrinkled = 10)
+sum(Obs) == sum(Exp)
+
+chisq.test(Obs, p = Exp, rescale.p = TRUE)
+
+#Expected ratio
+props <- c(9, 3, 3, 1)
+chisq.test(Obs, p = props, rescale.p = TRUE)
+```
+
+## Exact binomial test
+If there are only two categories, you can use a binomial test.  Here's an example from the help file of `binom.test()`:
+
+> Under (the assumption of) simple Mendelian inheritance, a cross between plants of two particular genotypes produces progeny 1/4 of which are "dwarf" and 3/4 of which are "giant", respectively. In an experiment to determine if this assumption is reasonable, a cross results in progeny having 243 dwarf and 682 giant plants. If "giant" is taken as success, the null hypothesis is that $p = 3/4$ and the alternative that $p ≠ 3/4$.
+
+Conover (1971), p. 97f.
+```{r binomial test}
+binom.test(c(682, 243), p = 3/4)
+```
+Data are in agreement with the null hypothesis
+
+## G-test
+There is no G-test for goodness-of-fit available in R, and it's so easy to calculate by hand!  R is a really good calculator to use because it is *vectorized*.  That is, when you multiply a vector by a number, the operation applies to all elements of a vector.  This will make it easy to calculate everything inside the summation.
+$$
+G = 2\bigg[\sum_i{O\ln\bigg(\frac{O}{E} \bigg)} \bigg]
+$$
+### Define observed and expected
+```{r}
+#data from dihybrid cross
+Obs #observed numbers
+Exp.p #expected probabilities
+#calculate expected numbers from probabilities
+Obs.sum = sum(Obs)
+Exp = Obs.sum * Exp.p
+Exp
+```
+### Calculate G
+To calculate every 
+```{r}
+OEratio = Obs/Exp #creates a vector from two vectors by dividing the first element of Obs by the first element of Exp, the second by the second, etc.
+OEratio
+G = sum(log(OEratio)*Obs) * 2
+G
+```
+
+### Find p-value
+Look up the p-value from the chi squared distribution using `pchisq()`
+```{r}
+p = pchisq(G, length(Obs) - 2, lower.tail = FALSE)
+p
+```
+
+### Making a g-test function
+First, put all the code together
+```{r}
+Obs.sum = sum(Obs)
+Exp = Obs.sum * Exp.p
+G = sum(log(Obs/Exp)*Obs) * 2
+G
+p = 1 - pchisq(G, length(Obs) - 2)
+p
+```
+
+Then select it and choose "Extract Function" from the "Code" menu.  When prompted, call it "mygtest".
+```{r}
+#after extracting it as a function
+mygtest <- function(Obs, Exp.p) {
+  Obs.sum = sum(Obs)
+  Exp = Obs.sum * Exp.p
+  G = sum(log(Obs/Exp)*Obs) * 2
+  G
+  p = 1 - pchisq(G, length(Obs) - 2)
+  p
+}
+```
+Now you should see a new function called "mygtest" in the Environment tab to the right.  You can now use your function on new data.
+
+```{r}
+mygtest(Obs = c(85, 25, 30, 20), Exp.p = c(9/16, 3/16, 3/16, 1/16))
+```
+Notice that it only displays the last thing printed out in the code of the function.  We can make it show both the G test statistic and the p-value by using `return()`
+```{r}
+mygtest <- function(Obs, Exp.p) {
+  Obs.sum = sum(Obs)
+  Exp = Obs.sum * Exp.p
+  G = sum(log(Obs/Exp)*Obs) * 2
+  G
+  p = 1 - pchisq(G, length(Obs) - 2)
+  p
+  return(list(G = G, p = p))
+}
+
+mygtest(Obs = c(85, 25, 30, 20), Exp.p = c(9/16, 3/16, 3/16, 1/16))
+```
+Save this and feel free to use it on your take-home!
+
+# Contingency Analysis
+Context 1: Fixed number of individuals assigned to or included in 2 or more groups (categorical explanatory variable).  Measure categorical response variable.  Column or row totals are predetermined.  Stacked bar plots might make more sense for this.
+
+Context 2: Random sample with 2 categorical variables measured on each subject.  Only n is fixed, any observation can have any combination of the two categorical variables.
+
+## Contingency Tables
+The first step in contingency analysis in R is to convert a tidy data frame, in which each row is an observation and each column is a variable (in this case, both columns are a factor), into a contingency table where rows represent one factor and columns represent another.  This can be done with the `table()` function.
+
+### Starting with frequency data (Context 1)
+
+If you already have frequency data, you can use `xtabs()` with a formula interface to create a contingency table object.
+```{r eval=FALSE, include=FALSE}
+angina <- tribble(~Treatment, ~Symptoms,     ~Freq,
+                  "Timelol",  "No_Angina", 44,
+                  "Timelol",  "Angina",    116,
+                  "Placebo",  "No_Angina", 19,
+                  "Placebo",  "Angina",    128)
+write_csv(angina, "Angina.csv")
+```
+
+Angina treatment data from lecture.  This shows every combination of treatment and symptoms and how many people fall into each group.
+```{r}
+angina <- read.csv("Angina.csv")
+angina
+```
+
+
+```{r}
+angina.table <- xtabs(Freq ~ Treatment + Symptoms, data = angina)
+# Freq ~ Treatment + Symptoms can be read as "frequency distributed as Treatment and Angina status"
+angina.table
+addmargins(angina.table)
+```
+
+### Starting with "tidy" data (Context 2)
+
+```{r eval=FALSE, include=FALSE}
+## NOT RUN ##
+worm <- read.csv(url("http://www.zoology.ubc.ca/~schluter/WhitlockSchluter/wp-content/data/chapter09/chap09e4WormGetsBird.csv"))
+worm$fishID <-  seq(1:length(worm$infection))
+worm <- worm %>% select(fishID, everything())
+worm <- worm %>% rename(bird_predation = fate)
+
+write_csv(worm, "WormGetsBird.csv")
+```
+
+Example 9.4 from the text. Are fish infected by a trematode worm eaten or not?
+
+```{r}
+worm <- read.csv("WormGetsBird.csv")
+worm
+```
+
+In this data set, each row is a fish and the columns tell you whether each fish was uninfected, lightly infected, or highly infected and whether it was eaten or not.
+
+```{r}
+worm.table <- table(worm$bird_predation, worm$infection) #first argument is the rows, second is the columns
+worm.table #contingency table
+addmargins(worm.table) #add row and column sums to display
+```
+
+### Exercise 1: Starting with contingency tables
+There isn't a way to directly enter a contingency table into R.  You'll need to convert the frequencies you see in the table into a different format to read it in.
+
+Enter this contingency table into R.  Hint: use Excel and save as a .csv, then read it in as usual or use `tribble()` from the `tibble` package.
+```{r}
+library(tibble)
+df <- tribble(~factor1, ~factor2, ~freq,
+              "A",      "YES",    35,
+              "A",      "NO",     22,
+              "B",      "YES",    55,
+              "B",      "NO",     100)
+df
+```
+
+Answer:
+```{r}
+snails <- tribble(~predation, ~color,     ~freq,
+                  "Broken",   "Banded",   182,
+                  "Broken",   "Unbanded", 116,
+                  "Intact",   "Banded",   403,
+                  "Intact",   "Unbanded", 385)
+snails
+snails.table <- xtabs(freq ~ color + predation, data = snails)
+addmargins(snails.table)
+chisq.test(snails.table)
+```
+
+Or:
+```{r starting with matrix}
+snail.matrix <- matrix(c(182, 403, 116, 385), nrow = 2, ncol = 2, byrow = TRUE)
+snail.table2 <- as.table(snail.matrix)
+rownames(snail.table2) <- c("Banded", "Unbanded")
+colnames(snail.table2) <- c("Broken", "Intact")
+snail.table2
+addmargins(snail.table2)
+chisq.test(snail.table2)
+```
+
+## Releveling Factors
+
+By default, when made into a factor, R uses alphabetical order.  This order usually isn't important but can affect the appearance of plots (e.g. mosaic plots and barplots) and some statistical analyses (e.g. Dunnett's Test).
+
+```{r}
+snails$color <- as.factor(snails$color)
+snails$color
+levels(snails$color)
+#first observation is "Banded", first level is "Banded"
+
+#manually set levels
+snails$color <- factor(snails$color, levels = c("Unbanded", "Banded"))
+snails$color
+#first observation is still "Banded" doesn't change data.  First level is "Unbanded"
+
+#DON'T do this:
+# levels(snails$color) <- c("Unbanded", "Banded")
+#That just re-names the levels.  It will change the underlying data!!!
+```
+Watch out for typos!  R will **not** give an error message when using this method.
+
+```{r}
+test <- factor(snails$color, levels = c("Ubanded", "Banded"))
+test
+```
+
+If you're doing a lot of work with categorical data, I highly recommend the package `forcats`. It has many fucntions for re-ordering levels different ways (by frequency, by some function of another column, in reverse order, etc.) 
+
+
+```{r}
+library(forcats)
+fct_reorder(snails$color, snails$freq) #re-order the color factor by the frequency column
+```
+
+
+## Chi-square
+Chi-square tests can also be used for contingency analysis. To conduct a chi-square test of independence first, you convert a data frame to a contingency table using `xtabs()`.  Then use `summary()` on that table to get chi-squre results.  You could also use `chisq.test()` on the table. By default, chisq.test uses the **Yates correction for continuity** (see ?chisq.tes() and page 251 of your textbook). Set `correct = FALSE` to get the same results as `summary()`. 
+
+```{r}
+summary(worm.table)
+chisq.test(worm.table, correct = FALSE)
+```
+
+
+## G-test
+There are no base R functions for G-tests, but functions for contingency table analysis with G-tests are found in a few packages including `DescTools` (`GTest()`) and `RVAideMemoire` (`G.test()`). However, rather than having you install a whole package just for one function we can use the function provided by Brent Larget, recommended by your textbook authors.
+
+```{r}
+source("http://www.stat.wisc.edu/~st571-1/gtest.R")
+#source works kind of like library(), but for single .R files instead of packages.
+```
+
+After running the code above, you should see a new function in your Environment tab, `g.test()`.  This function also works on contingency table objects.
+
+```{r}
+g.test(worm.table)
+```
+Reject null hypothesis.  There is an association between worm infection and predation by birds.
+
+## Fisher's Exact Test
+
+Fisher's exact test (`fisher.test()`) is for 2x2 contingency tables with small n. It also works on contingency table objects.
+
+```{r eval=FALSE, include=FALSE}
+vampire <- read.csv(url("http://www.zoology.ubc.ca/~schluter/WhitlockSchluter/wp-content/data/chapter09/chap09e5VampireBites.csv"))
+write_csv(vampire, "VampireBites.csv")
+```
+Example 9.5 in your text. Do vampire bats prefer to feed on cows in estrous?
+```{r}
+vampire <- read.csv("VampireBites.csv")
+vampire.table <- table(vampire$bitten, vampire$estrous)
+vampire.table
+```
+
+```{r}
+fisher.test(vampire.table)
+```
+Reject null hypothesis, vampire bats prefer cows in estrous
+
+## Stacked bar plots
+The base R function `barplot()` works on contingency table objects
+```{r}
+barplot(angina.table, legend.text = TRUE)
+# We probably want the treatment on the x-axis.  Transpose the data with t()
+barplot(t(angina.table), legend.text = TRUE,
+        xlab = "Treatment",
+        ylab = "Frequency (number of patients)")
+```
+
+ggplot always needs a data frame, so we have to start with the frequency table
+```{r}
+#plotted as frequency
+ggplot(angina) +
+  geom_col(aes(x = Treatment, y = Freq, fill = Symptoms))
+```
+
+
+## Mosaic plots
+The `mosaicplot()` function also works on contingency table objects.
+```{r}
+mosaicplot(worm.table)
+#that looks not so great.  For plotting, let's switch the axes
+
+mosaicplot(worm.table,
+           dir = c("h","v")) #controls how to split the boxes (vertical, then horizontal by default).  See help file for more info.
+```
+We can pretty it up and make it more visually informative by adding colors.
+
+```{r}
+mosaicplot(worm.table,
+           dir = c("h","v"),
+           color = c("firebrick", "goldenrod2", "lightgoldenrodyellow"),
+           xlab = "Infection Status",
+           ylab = "Bird Predation",
+           main = NULL) #remove main title
+
+#for a list of valid color names:
+# colors()
+
+#R also understands hex codes:
+# mosaicplot(worm.table,
+#            dir = c("h", "v"),
+#            color = c("#FF0202", "#FFA602", "#FFF502"),
+#            xlab = "Infection Status",
+#            ylab = "Fate",
+#            main = NULL)
+```
+
+#### Exercise: Make a mosaic plot
+Using the snail data you entered earlier, make a mosaic plot, and make it your own with colors and labels! Try to figure out what other graphical parameters you can change.
+```{r}
+(snails.result<-summary(snails.table))
+mosaicplot(snails.table,
+           color = c("aquamarine4", "goldenrod1"),
+           border = "purple",
+           xlab = "Snail Color Pattern",
+           ylab = "Predation",
+           main = "Bird Predation and Snail Shell Pattern",
+           sub = paste0("X^2 = ",
+                        round(snails.result$statistic, 4),
+                        ", p = ",
+                        round(snails.result$p.value, 4)),
+           cex.axis = 1.5,
+           las = 1)
+
+
+```
+
+
+### Mosaic plots in ggplot2
+There is also a `ggmosaic` package which provides `geom_mosaic()` to ggplot. For our purposes, `mosaicplot()` is so simple that we're not going to cover a ggplot way of making moasic plots.  For more advanced mosaic plots, however, you may find `ggmosaic` helpful.

@@ -1,0 +1,412 @@
+---
+title: "Categorical Data Analysis"
+author: "Avalon C.S. Owens, Eric R. Scott"
+date: "11/02/2018"
+output: 
+  ioslides_presentation:
+    widescreen: yes
+    df_print: paged
+---
+
+```{r include=FALSE}
+# library(tidyverse)
+library(knitr)
+options(scipen = 999)
+```
+
+## Overview
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+# OR
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+# For G-Test:
+library(DescTools)
+# New package to install:
+library(ggmosaic)
+```
+- Data on Canvas!
+- Goodness-of-fit tests ($\chi^2$ and $G$-test AKA log-likelihood ratio)
+- Contingency tables
+- Contingency tests (Fisher's exact, $\chi^2$, $G$-test)
+- Mosaic plots in `ggplot2` with `ggmosaic`
+
+# Goodness-of-fit
+
+## Goodness-of-fit
+
+```{r echo=FALSE, out.width="55%"}
+include_graphics("https://upload.wikimedia.org/wikipedia/commons/0/03/Figure_12_03_02.png")
+```
+
+## Chi-square with expected probabilities
+
+Phenotypes: | Yellow & Round | Green & Round | Yellow & Wrinkled | Green & Wrinkled
+------------|----------------|---------------|-------------------|------------------
+Offspring:  | 93             | 31            | 28                | 8
+
+**Do offspring ratios support a diyhybrid cross model?**
+
+Observed numbers:
+
+```{r}
+Obs <- c(yellowround = 93, greenround = 31, yelowwrinkled = 28,  greenwrinkled = 8)
+```
+
+Expected probabilities:
+
+```{r}
+Exp.p <- c(9/16, 3/16, 3/16, 1/16)
+```
+
+## Chi-square with expected probabilities
+
+Do the test with `chisq.test()`
+
+- Supply observed numbers and expected probabilities
+
+```{r}
+chisq.test(Obs, p = Exp.p)
+```
+>- **Interpretation?**
+
+## Chi-squared with expected values
+
+Use `rescale.p = TRUE` to use expected *values* instead of expected probabilities
+
+```{r}
+Exp <- c(yellowround = 90, yelowwrinkled = 30, greenround = 30, greenwrinkled = 10)
+sum(Obs) == sum(Exp) #the expected numbers of each type.
+
+chisq.test(Obs, p = Exp, rescale.p = TRUE)
+```
+
+## Chi-squared with expected ratios
+
+You could also supply the 9:3:3:1 expected *ratio*
+
+```{r}
+props <- c(9, 3, 3, 1)
+chisq.test(Obs, p = props, rescale.p = TRUE)
+```
+
+
+## G test
+
+- The package we installed for Dunnnett's Test also has a G-test function!
+
+- Unlike `chisq.test()`, you *must* supply expected **probabilities**.
+
+```{r}
+#library(DescTools)
+GTest(Obs, p = Exp.p) #'p' must be probabilities
+```
+>- **Interpretation?**
+
+## Exact binomial test
+
+- If there are only two categories, you can use a binomial test.  
+```{r echo=FALSE}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/1/17/Punnett_square_mendel_flowers.svg/200px-Punnett_square_mendel_flowers.svg.png")
+```
+
+- You cross two heterozygous corn plants and get 243 dwarf offspring and 682 giant offspring.  
+- Is plant size a Mendelian trait?
+1. Define "success" (totally arbitrary)
+2. Probability of "success" = 3/4 if you chose "giant", 1/4 if you chose "dwarf"
+
+
+## Exact binomial test in R
+```
+binom.test(c(<<#successes>>, <<#failures>>), p = <<probability of success>>)
+```
+If success is "giant":
+```{r binomial test}
+binom.test(c(682, 243), p = 3/4)
+```
+
+## Interpretation
+```{r echo=FALSE}
+binom.test(c(682, 243), p = 3/4)
+```
+- Accept or reject null?
+- Is it Mendelian?
+
+
+# Contingency
+
+## Contingency analysis
+
+**Context 1:** Assign samples to levels of categorical variable, measure a categorical variable.
+
+**Context 2:** Random sample individuals and measure *two* categorical variables.
+
+Both have two categorical variables, but data entry and data visualization might differ.
+
+## Contingency tables
+```{r echo=FALSE}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/f/fa/Table_of_gender_by_major.png")
+```
+
+- Inherently untidy!
+- It's basically impossible to enter contingency tables *directly*.
+- We'll cover two possible formats of data that we can convert to contingency tables in R:
+
+1. Already tabulated data, like you might be likely to get from context 1 experiments
+2. Two columns of categorical data, like you might be likely to get from context 2 experiments
+
+
+## Starting with frequncy data (context 1){.smaller}
+
+Angina treatment data from lecture:
+
+- Every combination of treatment and symptoms and # of people in each group.
+- You might record data in this format since you *assigned* the groups and simply counted individuals with or without symptoms.
+
+```{r}
+angina <- read.csv("Angina.csv")
+angina
+#Try using `View(angina)`
+```
+
+## Converting frequency data into a contingency table
+
+- `"table"` is a special class in R.
+- R knows how to do things like $\chi^2$ tests automatically on `table`s. 
+- We need to make our `data.frame` into a `table`. 
+- In this case, we do that with `xtabs()`, which takes a formula.
+
+```{r}
+class(angina)
+```
+
+## Making a `table` with `xtabs()`
+
+- Uses formula interface.
+- `Freq` as explained by `Treatment` and `Symptoms`
+
+```{r}
+angina.table <- xtabs(Freq ~ Treatment + Symptoms, data = angina)
+angina.table
+
+class(angina.table)
+```
+
+
+## Starting with tidy data (context 2)
+
+- Example 9.4 from the text: Are fish infected by a trematode worm eaten or not?
+- Two columns of factors: infection status and predation (eaten or not)
+- What makes this tidier than the previous example?
+
+```{r rows.print=5}
+worm <- read.csv("WormGetsBird.csv")
+worm
+```
+
+## Tabulating data
+
+We *could* get this into the same format as the previous example (a frequency table) using `count()` and then use `xtabs()` on it...
+
+```{r}
+worm %>% count(infection, bird_predation)
+```
+...But there is another way
+
+## Tabulating data
+
+- `table()` is *another* function for making contingency tables
+- Unlike `xtabs()` it takes two vectors of categorical data as input.
+
+```{r}
+worm.table <- table(worm$infection, worm$bird_predation)
+worm.table
+class(worm.table)
+```
+
+## Two ways to make tables!
+
+- `xtabs()`: Use when you have a column of frequencies and two columns of factors.  Uses the formula interface.
+```
+mytable <- xtabs(freq ~ factor1 + factor2, data = mydata)
+```
+- `table()`: Use when you have two columns of categorical data and each row is an observation. Needs vectors so you have to use the `$` operator.
+```
+mytable <- table(myotherdata$factorA, myotherdata$factorB)
+```
+
+## Adding margins to a contingency table
+
+
+```{r}
+angina.table %>% addmargins()
+worm.table %>% addmargins()
+```
+
+## Contingency tests
+
+Once you have a contingency table of the class `table`, it's easy to do statistical tests
+
+```{r echo=FALSE}
+include_graphics("https://media.giphy.com/media/9lMoyThpKynde/giphy.gif")
+```
+
+
+## Fisher's Exact test for 2x2 tables
+
+```{r}
+fisher.test(angina.table)
+```
+- Accept or reject null?
+- Did the drug work?
+
+## $\chi^2$ test
+
+```{r}
+chisq.test(worm.table)
+```
+- Accept or reject null?
+- Is fish predation contingent on infection status?
+
+## $\chi^2$ test
+
+```{r}
+chisq.test(angina.table)
+```
+
+## G-test
+- `GTest()` function from the `DescTools` package
+```{r}
+GTest(worm.table)
+```
+
+# Plotting Contingency Data
+
+## Mosaic plots
+
+- `ggmosaic` adds `geom_mosaic()` for plotting contingency data
+- Works on tidy data, **not** `table`s
+
+```{r echo=FALSE}
+library(ggmosaic)
+ggplot(worm) + 
+  geom_mosaic(aes(x = product(bird_predation, infection), fill = bird_predation)) +
+  labs(x = "Infection Status", y = "Bird Predation")
+```
+
+## Using geom_mosaic(){.smaller}
+
+- `geom_mosaic()` is a little weird, because mosaic plots are a little weird
+- `aes()` *MUST* go inside of `geom_mosaic()`, *NOT* inside of `ggplot()`.
+- Rather than supplying an x and a y aesthetic, you supply only x as a `product()`.  I know, weird.
+
+```{r fig.height=3.5, fig.width=4}
+library(ggmosaic)
+ggplot(worm) + 
+  geom_mosaic(aes(x = product(bird_predation, infection)))
+```
+
+## Prettying up `geom_mosaic()`
+
+- Add color with the `fill` aesthetic
+- Add axis labels
+
+```{r fig.height=3.2, fig.width=5}
+ggplot(worm) + 
+  geom_mosaic(aes(x = product(bird_predation, infection), fill = bird_predation)) +
+  labs(x = "Infection status", y = "Bird predation")
+```
+
+## Mosaic plot for angina data{.smaller}
+
+- `angina` data isn't tidy!
+- Convert frequency table to tidy data with `uncount()` from `tidyr`
+
+```{r rows.print=5}
+angina
+angina.tidy <- angina %>% tidyr::uncount(weights = Freq)
+angina.tidy
+```
+
+## Mosaic plot for angina data
+
+Now we can plot the tidy data with `geom_mosaic()`
+
+```{r fig.height=3.5, fig.width=5}
+ggplot(angina.tidy) +
+  geom_mosaic(aes(x = product(Symptoms, Treatment), fill = Symptoms)) +
+  labs(x = "Treatment", y = "Symptoms")
+```
+
+## Try on your own!
+`mtcars` is a dataset in `ggplot2` from *Motor Trends* magazine.  `gear` is the number of gears a car has and `am` is whether a car has manual (1) or automatic (0) transmission.
+
+- Is # of gears contingent on transmission type?
+- Make a mosaic plot
+- Do a statistical test
+
+```{r rows.print=4}
+mtcars
+```
+
+
+
+# If you want to learn more...
+
+## More statistics!
+
+- Ecological Models and Data (BIO0133)
+    + If you have more than two variables
+    + Instead of transforming data, use a test that assumes a different distribution besides normal
+
+- [Mixed Models Practical Guide](https://www.juliapilowsky.com/2018/10/19/a-practical-guide-to-mixed-models-in-r/)
+    + Fixed and random effects in the same regression
+    
+```{r echo=FALSE, fig.height=3, fig.width=5}
+df <- tibble(x = rnorm(25), A = exp(x) + rnorm(25, 2), B = exp(x*.8) + rnorm(25), C = exp(x*.7) + rnorm(25))
+df2 <-
+  df %>% 
+  gather(-x, key = group, value = y)
+
+ggplot(df2 %>% filter(x > 0, y > 0), aes(x = x, y = y, color = group)) +
+  geom_point() +
+  geom_smooth(method = "glm", method.args = list(family = gaussian(link = "log")))
+```
+
+## More tidyverse!
+
+- R for Data Science: [r4ds.had.co.nz](https://r4ds.had.co.nz/index.html)
+- Slack channel for R for Data Science: [bit.ly/R4DSslack](https://rfordatascience.slack.com/join/shared_invite/enQtMzA1Nzk1MjIzNDczLTY0OTVlMzM3ZTU5ZjA3NWE5ZDkxOGVmNjRjODQ2YmRjMzg4NWQxMDAxZTcwNzViZTczOThiNzBhYWJhZDM2ZTU)
+- \#TidyTuesday on Twitter
+    
+    
+## More R Markdown!
+
+- Make customized web pages, PDFs, presentations, etc. in RStudio with [R Markdown](https://bookdown.org/yihui/rmarkdown/)
+- Make a website in RStudio with [blogdown](https://bookdown.org/yihui/blogdown/)
+    
+
+## Interactive plots!
+
+- Make ggplots interactive with `ggplotly`
+
+```{r fig.height=3.5, fig.width=5, message=FALSE, warning=FALSE}
+library(plotly)
+p <- ggplot(iris, aes(x = Petal.Length, y = Petal.Width, color = Species)) +
+  geom_point()
+ggplotly(p)
+```
+
+## Really fancy stuff with Shiny
+
+- [Shiny apps](https://shiny.rstudio.com/gallery/)
+
+## Thank you, keep in touch!
+
+Twitter:
+
+- @LeafyEricScott
+- @avalonceleste
+    

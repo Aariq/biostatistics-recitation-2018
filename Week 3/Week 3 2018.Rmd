@@ -1,0 +1,402 @@
+---
+title: "Probability Distributions and Bar Plots"
+author: "Eric R. Scott, Avalon C.S. Owens"
+header-includes:
+  - \usepackage{coloremoji}
+output:
+  pdf_document: default
+  ioslides_presentation: default
+---
+
+```{r message=FALSE, warning=FALSE, include=FALSE}
+library(cowplot)
+library(ggplot2)
+library(dplyr)
+library(knitr)
+knitr::opts_chunk$set(error = TRUE)
+```
+
+## Overview
+
+- Debugging common errors
+- Beautifying your homework
+- Probability distribution functions in R
+- Plotting binomial distributions with `ggplot2`
+- Building on the boxplot: more fun with `ggplot2`
+
+## My homework won't knit! 😖
+
+- When you click "Knit", R instantly forgets all stored datasets and closes all opened packages
+- R starts from a clean slate and reads your code top to bottom
+- Your code has to run with ZERO ERRORS in order for it to knit!
+- Check for errors with "Run" → "Restart R and run all chunks"
+- If there is an error, the error message will be written in <span style="color:red">red</span>
+
+## I can't read in the file! 😭
+
+- You must save your .Rmd document for it to exist somewhere
+- Your .csv file needs to be in the same place as the .Rmd (to read it in with only the file name)
+- Simple typos in the file name will give you an error like this:
+
+```{r}
+read.csv("Camridge Trees.csv")
+```
+
+## Tips on data management
+
+- Create a folder for Biostats recitation
+- Create a separate sub-folder for each week
+    + Make a new R Notebook and save it in this folder
+    + Save data (.csv files) you need in the same folder
+
+# Beautifying your Homework
+
+## What we're doing to help
+
+- Improved formatting in PS3.Rmd
+- Questions as headers, with supporting text in *italics*
+- Minimal text---refer to the handout .pdf for more information
+- First code chunk that loads packages and sets some options (**edit at your own risk**)
+
+## Tips on code beautification
+
+- Start new lines at natural break points (e.g. after pipes)
+- Use indents (you can also "auto-indent" with command + i)
+
+**UGLY:**
+
+```{r eval=FALSE}
+chickwts %>% group_by(feed) %>% summarize(mean = mean(weight), sd = sd(weight), range = max(weight) - min(weight))
+```
+
+**BEAUTIFUL:**
+
+```{r eval=FALSE}
+chickwts %>%
+  group_by(feed) %>%
+  summarize(mean = mean(weight),
+            sd = sd(weight),
+            range = max(weight) - min(weight))
+```
+
+## Tips on text formatting
+
+- After knitting to Word, make sure to check the formatting; directly edit the .docx to improve readability, if you need to
+- After printing, circle your answers if they're hard to find
+- Check your rounding! If `round()` isn't working, you can always just write out your answer below in plain text
+
+```{r}
+weights <- c(2,2,3)
+mean(weights)
+```
+
+**mean weight = 2.3 g**
+
+# Probability distributions
+
+```{r echo=FALSE, fig.height=3}
+unif.df <- data.frame(x = 1:6, prob = dunif(1:6, min = 0, max = 6))
+unif.plot <- ggplot(unif.df, aes(x = x, y = prob)) +
+  geom_col() +
+  ylim(0,1) +
+  labs(y = "P[x]",
+       x = "Number of pips on a die",
+       title = "Uniform") +
+  theme_grey()
+
+binom.df <- data.frame(x = 1:20, prob = dbinom(1:20, size = 20, prob = 0.5))
+binom.plot <- ggplot(binom.df, aes(x = x, y = prob)) +
+  geom_col() +
+  ylim(0,1) +
+  labs(y = "P[x]",
+       x = '# of "heads" in 20 coin flips',
+       title = "Binomial") +
+  theme_grey()
+
+norm.plot <- ggplot(data.frame(x = c(-10, 10)), aes(x = x)) +
+  stat_function(fun = dnorm, args = list(mean = 0, sd = 2)) +
+  labs(y = "P[x]",
+       x = "x",
+       title = "Normal") +
+  theme_grey()
+
+plot_grid(unif.plot, binom.plot, norm.plot, nrow = 1, ncol = 3)
+```
+
+## Probability Distributions in R
+
+- All probability distributions in R have four related functions:
+    + A density function that starts with `d` (e.g. `dbinom()`)
+    + A distribution function that starts with `p` (e.g. `pbinom()`)
+    + A quantile function that starts with a `q` (e.g. `qbinom()`)
+    + A random number function that starts with `r` (e.g. `rbinom()`)
+
+- All distributions work similarly
+- Today we'll focus on binomial and normal distributions
+- Next week we'll introduce the t distribution!
+
+## Binomial Distribution
+
+Number of times one of two mutually exclusive events occurs in n independent trials
+
+```{r echo=FALSE, fig.height=3.5, fig.width=7}
+arums <- data.frame(seeds = 0:3)
+arums <- arums %>% 
+  mutate(prob = dbinom(seeds, size = 3, prob = 0.30))
+#using mutate to get the probability column instead
+
+arumplot <- ggplot(arums, aes(x = seeds, y = prob)) +
+  geom_col() +
+  ylim(0,1) +
+  labs(x = "# of successful germinations", y = "P[x]") +
+  theme_gray() +
+  ggtitle("Probability of Successful Germination of Titan Arum Seeds")
+arumplot
+```
+
+## `*binom()` family of functions
+
+- `dbinom()`, the density function---what's the probability of $[X = 5]$?
+- `pbinom()`, the distribution function---what's the probability of $[X \leq 5]$?
+- `qbinom()`, the quantile function---what quantile is associated with $P = 0.62$?
+- `rbinom()`, the random function---what's a random number from a binomial distribution with $n = 10$ and $p = 0.5$?
+
+## `*binom()` Think-Pair-Share
+- Take a look at the help file for `pbinom()`
+
+    + Which argument is the number of trials?
+    + Which argument is binomial p AKA p[success]?
+    + What does `lower.tail=FALSE` or `lower.tail=F` do?
+    + Which `*binom()` function would you use to figure out the probability of tossing a coin 10 times and getting 5 heads?
+
+## `*binom()` Arguments
+
+- `size =` is $n$
+- `prob =` is the binomial probability, $p$
+- `lower.tail = ` switches between $P[X ≤ x]$ (`TRUE`, default) and $P[X > x]$ (`FALSE`)
+- `dbinom()`, the density function, would be used to find the probability of getting 5 heads in 10 coin tosses $P[X = 5]$
+
+```{r}
+dbinom(x = 5, size = 10, prob = 0.5) %>% round(4)
+```
+
+## `pbinom()`, the distribution function
+
+- If you toss a coin 10 times, what's the probability of getting 5 or fewer heads?
+- $P[X \leq 5$ heads$]$
+
+```{r}
+pbinom(q = 5, size = 10, prob = 0.5) %>% round(4)
+```
+
+- more than 5 heads?
+- $P[X > 5$ heads$]$
+
+```{r}
+pbinom(q = 5, size = 10, prob = 0.5, lower.tail = F) %>% round(4)
+```
+
+## Practice binomial calculations
+
+1. If you roll a single 6-sided die 10 times, what's the probability of rolling a 6 more than once?
+
+2. A study of loggerhead turtles estimates the annual survival probability of juveniles at 0.73. With a starting population of 1000 juvenile turtles, what's the probability that at least 700 will survive?
+
+```{r eval=FALSE, include=FALSE}
+pbinom(699, 1000, 0.73, lower.tail = FALSE)
+```
+
+
+## Normal Distribution
+
+Defined by mean and standard deviation
+
+```{r echo=FALSE}
+norm.plot +
+  stat_function(fun = dnorm, args = list(mean = 2, sd = 1), color = "red") +
+  stat_function(fun = dnorm, args = list(mean = -3, sd = 3), color = "green") +
+  ggtitle("A Few Normal Distributions")
+```
+
+## `*norm()` family of functions
+
+- ~~`dnorm()`~~, the density function---doesn't do what you might think it does, so **don't use it!**
+- `pnorm()`, the distribution function---what's the probability $[X > 1.64]$?
+- `qnorm()`, the quantile function---what quantile is associated with $P = 0.05$?
+- `rnorm()`, the random function---what is a random number from a normal distribution with $\mu = 0$ and $\sigma^2 = 1$?
+
+## `pnorm()`, the distribution function
+
+Lower tail probability is the default.
+
+```{r}
+pnorm(1.96, mean = 0, sd = 1)
+```
+
+This is the area under the curve **less** than 1.96
+
+To get the upper tail:
+
+```{r results="hold"}
+1 - pnorm(1.96)
+#or
+pnorm(1.96, lower.tail = FALSE)
+```
+
+## Practice normal calculations
+
+1. $P[X > 1.2]$ with $\mu = 1, \sigma^2 = 0.5$
+
+2. $P[Z > 1.2]$
+
+3. $P[Z \geq 1.2]$
+
+## Uniform Distributions
+
+- ...Are boring! 😴
+- Probabilities are easy to calculate by hand or with a calculator
+- However, they can be useful for generating random numbers
+
+## Random numbers from uniform
+
+You put a 100 m long transect through your field site and you want to choose a three random locations along the transect to put your experimental plots.
+
+- Why would `rnorm()` be a bad choice?
+
+```{r}
+runif(3, min = 0, max = 100)
+```
+
+- `sample()` is probably a better choice for random integers
+
+# Coding hack #1
+
+## Easy sequences
+
+```{r}
+1:10
+```
+```{r}
+sample(1:1000, 3)
+```
+
+# Bar plots with `ggplot2`
+
+## Plotting a binomial distribution
+
+Plot the binomial distribution that represents the possible outcomes of 6 coin flips
+
+- Because binomial distributions are **discrete**, we use bar plots
+- To plot a binomial distribution, first we will need a data frame!
+
+## Making a data frame
+
+- We can create a data frame from scratch with `data.frame(column_name = data)`
+- All of the columns have to have the same length!
+
+```{r}
+coinflips <- data.frame(num.heads = 0:6,
+                        probs = dbinom(0:6, size = 6, prob = 0.5))
+coinflips
+```
+
+## Making a bar plot
+
+- use `geom_col()` when you've already know the heights of the bars you want to plot
+- use `geom_bar()` if you want ggplot to calculate group means and use them for bar heights
+
+Since we want to plot the probabilities as the heights, we will use `geom_col()`. (We might practice using `geom_bar()` next week.)
+
+## Fill in the blanks
+
+```{r, eval=FALSE}
+ggplot(???, aes(x = ???, y = ???)) +
+  geom_col()
+```
+
+## Fill in the blanks
+
+```{r}
+ggplot(coinflips, aes(x = num.heads, y = probs)) +
+  geom_col()
+```
+
+## Finishing touches
+
+- Label your axes!
+- Since probability ranges from 0--1, we might want to adjust the scale of the y-axis using this coding hack: `ylim(0,1)`
+
+```{r}
+p <- ggplot(coinflips, aes(x = num.heads, y = probs)) +
+  geom_col() +
+  labs(x = "Number of heads in 10 coin flips", y = "Probability") +
+  ylim(0,1)
+```
+
+## Finished!
+
+```{r}
+p
+```
+
+# Building on the boxplot
+
+```{r echo=FALSE, fig.height=3, fig.width=7}
+ggplot(chickwts, aes(x = feed, y = weight)) +
+  geom_violin(trim = FALSE) +
+  geom_boxplot(width = 0.15, outlier.color = "red") +
+  # geom_jitter(alpha = 0.3, width = 0.1) +
+  theme_grey() +
+  labs(x = "Feed", y = "Weight (g)")
+```
+
+## Multiple `geom`s
+
+- Last week we introduced `geom_violin()` and `geom_jitter()`
+- Sometimes boxplots can be improved by adding additional representations of data
+- Boxplot + jitter plot shows boxplot info plus the actual data
+- Boxplot + violin plot is nice when there are many data points
+
+```{r}
+p2 <- ggplot(chickwts, aes(x = feed, y = weight)) +
+  labs(x = "Feed", y = "Weight (g)")
+```
+
+## Boxplot + jitter
+
+- Nice when the number of points is small
+
+```{r}
+p2 + geom_boxplot() + geom_jitter()
+```
+
+## Making adjustments
+
+- make points transparent with `alpha = `
+- make jitter narrower with `width = `
+- change boxplot outlier points so they look different than data
+
+```{r fig.height=3}
+p2 + geom_boxplot(outlier.color = "red", outlier.shape = "triangle") + 
+  geom_jitter(width = 0.25, alpha = 0.3)
+```
+
+## Order of `geom` matters
+
+```{r fig.height=2, fig.width=4}
+p2 + geom_jitter() + geom_boxplot()
+p2 + geom_boxplot() + geom_jitter()
+```
+
+## Boxplot + violin
+
+- Adjust boxplot width to fit inside violins
+- Use `trim = FALSE` in `geom_violin()` to prevent it from truncating the ends
+
+```{r fig.height=3}
+p2 + geom_violin(trim = FALSE) +
+     geom_boxplot(width = 0.1)
+```
+
+
+

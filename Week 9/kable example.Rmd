@@ -1,0 +1,43 @@
+---
+title: 'knitr::kable() Example'
+output:
+  word_document: default
+---
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(knitr)
+```
+
+## Without kable()
+
+```{r}
+chickwts %>%
+  group_by(feed) %>%
+  summarize(mean = mean(weight), var = var(weight), n = n())
+```
+
+## With kable()
+
+```{r}
+chickwts %>%
+  group_by(feed) %>%
+  summarize(mean = mean(weight), var = var(weight), n = n()) %>% 
+  kable()
+```
+
+
+## Making fancy ANOVA tables
+
+You can use `kable()` directly on the output of some statistics funcitons, including `anova()`
+
+```{r}
+m <- aov(weight ~ feed, data = chickwts)
+anova(m)
+```
+
+```{r}
+anova(m) %>% kable()
+```
+
+**But be careful!** It rounds your numbers for you by default!  p = 0 is impossible, so you'll have to edit the table in the Word output.

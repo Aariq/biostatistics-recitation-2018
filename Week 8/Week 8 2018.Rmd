@@ -1,0 +1,586 @@
+---
+title: "Testing for normality in R"
+author: "Avalon C.S. Owens, Eric R. Scott"
+date: "10/26/2018"
+output:
+  ioslides_presentation: default
+  pdf_document: default
+---
+## Note for next time:
+
+- Switch `chickwts` to another more t-test appropriate dataset (maybe `sleep`)
+- Curate titanic data better.  E.g. survived column should either be survival or values in it should be yes and no.
+- Emphasized *why* you need to filter to split data verbally and with whiteboard, but could include this as a slide showing results of `shapiro.test()` on two separate normals with different means, and on combined data.
+
+
+```{r include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(error = TRUE)
+```
+
+## Packages for today
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(car)
+skylight = read.csv("skylight.csv")
+titanic = read.csv("titanic.csv")
+```
+
+## Plan for today
+
+- Transforming your data
+    + `mutate()` to add columns
+    + `filter()` to select rows
+- Testing your test assumptions
+    + `shapiro.test()` for normality
+    + `leveneTest()` for equal variance
+- Normal probability plots with `ggplot2`
+- Non-parametric tests (part 1 of 2)
+    + `wilcox.test()`
+
+# Transforming your data
+
+## Transforming your data
+
+What to do when your data don't look like you'd like...?
+
+```{r}
+skylight = read.csv("skylight.csv")
+skylight$sky_type <- factor(skylight$sky_type, 
+                            levels = c("skyglow",
+                                      "twilight",
+                                      "starlight"))
+str(skylight)
+```
+
+
+## Transforming your data
+
+```{r echo=FALSE}
+ggplot(skylight, aes(x = wavelength, 
+                     y = intensity, 
+                     color = sky_type)) + 
+  geom_line() + theme_dark() + 
+  scale_color_manual(values=c("pink",
+                              "#ccccff", 
+                              "lavender"), 
+                     name="night sky",
+                     labels=c("skyglow", 
+                              "twilight", 
+                              "starlight")) +
+  labs(y = expression("irradiance"~(photons~cm^{-2}~s^{-1})), x = "wavelength (nm)")
+```
+
+## Transforming your data
+
+```{r}
+ggplot(skylight, aes(x = wavelength, y = intensity, 
+                     color = sky_type)) + geom_line()
+```
+
+## Transforming your data
+
+```{r}
+ggplot(skylight, aes(x = wavelength, y = log(intensity), 
+                     color = sky_type)) + geom_line()
+```
+
+
+## Transforming your data with `mutate()`
+
+```{r}
+head(skylight)
+log_skylight <- skylight %>% mutate(log_intensity = log(intensity))
+```
+
+
+## Transforming your data with `mutate()`
+
+```{r}
+head(log_skylight)
+log_skylight <- skylight %>% mutate(log_intensity = log(intensity))
+```
+
+## Transforming your data
+
+Create new column that gives you intensity in **Watts**!
+
+Watts = (speed of light / wavelength in m) x photon count x Planck's constant
+
+```{r}
+c <- 3e+08 #speed of light
+h <- 6.626e-34 #Planck's constant
+nm_to_m <- 1e-09 #nm to m conversion
+head(skylight)
+```
+
+
+## Transforming your data
+
+```{r}
+c <- 3e+08 #speed of light
+h <- 6.626e-34 #Planck's constant
+nm_to_m <- 1e-09 #nm to m conversion
+head(skylight, 2)
+skylight_W <- skylight %>% 
+  mutate(intensity_W = (c/wavelength*nm_to_m)*(intensity)*h)
+head(skylight_W, 2)
+```
+
+
+# Coding hack!
+
+## Logical operators
+
+$>$:  `>`
+
+$<$:  `<`
+
+$\geq$:  `>=`
+
+$\leq$:  `<=` Not the same as `<-`!     
+
+$=$: `==`
+
+$\neq$: `!=`
+
+and: `&`
+
+or:  `|` Doesn't mean 'given that'!  
+
+## Logical operators
+
+```{r}
+10 <= 6
+```
+
+## Logical operators
+
+```{r}
+10 <= 6
+9 == 9
+```
+
+## Logical operators
+
+```{r}
+10 <= 6
+9 == 9
+9 != 7000000
+```
+
+## Logical operators
+
+```{r}
+10 <= 6
+9 == 9
+9 != 7000000
+```
+
+```{r eval = F}
+9 = 8.999999
+```
+
+## Logical operators
+
+```{r}
+10 <= 6
+9 == 9
+9 != 7000000
+```
+
+```{r}
+9 = 8.999999
+```
+
+## Logical operators
+
+```{r eval = F}
+10 < 11 & 10 > 9
+```
+
+
+## Logical operators
+
+```{r}
+10 < 11 & 10 > 9
+```
+
+
+## Logical operators
+
+```{r}
+10 < 11 & 10 > 9
+```
+
+```{r eval=F}
+1 < 2 | 1 > 3
+```
+
+
+## Logical operators
+
+```{r}
+10 < 11 & 10 > 9
+1 < 2 | 1 > 3
+```
+
+
+## Logical operators
+
+```{r}
+10 < 11 & 10 > 9
+1 < 2 | 1 > 3
+```
+
+```{r eval = F}
+10 < 11 & 10 < 9
+```
+
+
+## Logical operators
+
+```{r}
+10 < 11 & 10 > 9
+1 < 2 | 1 > 3
+10 < 11 & 10 < 9
+```
+
+
+## Logical operators
+
+```{r}
+10 < 11 & 10 > 9
+1 < 2 | 1 > 3
+10 < 11 & 10 < 9
+```
+
+```{r eval = F}
+4 < 2 | 42 > 4
+```
+
+
+## Logical operators
+
+```{r}
+10 < 11 & 10 > 9
+1 < 2 | 1 > 3
+10 < 11 & 10 < 9
+4 < 2 | 42 > 4
+```
+
+
+## Transforming your data with `filter()`
+
+```{r}
+str(skylight)
+sky_twilight <- skylight %>% filter(sky_type == "twilight")
+```
+
+
+## Transforming your data with `filter()`
+
+```{r}
+head(sky_twilight,3)
+sky_twilight <- skylight %>% filter(sky_type == "twilight")
+```
+
+
+## Transforming your data with `filter()`
+
+```{r}
+head(sky_twilight,3)
+sky_twilight <- skylight %>% filter(sky_type == "twilight")
+```
+
+
+## Transforming your data with `filter()`
+
+1. Filter the skylight dataset for 'natural' measurements -- anything that wasn't taken during exposure to urban skyglow.
+
+2. BONUS CHALLENGE! Filter the dataset for skyglow and twilight measurements at wavelengths below 500 nm. 
+
+(And here's a fun fact: these wavelengths cannot be detected by the satellites used to photograph the earth at night!)
+
+
+## Transforming your data with `filter()`
+
+1. Filter the skylight dataset for 'natural' measurements -- anything that wasn't taken during exposure to urban skyglow.
+
+```{r}
+sky_natural <- skylight %>% 
+  filter(sky_type == "twilight" | sky_type == "starlight")
+```
+
+2. BONUS CHALLENGE! Filter the dataset for skyglow and twilight measurements at wavelengths below 500 nm. 
+
+```{r}
+sky_satellite <- skylight %>% 
+  filter(wavelength < 500 & 
+         (sky_type == "twilight" | sky_type == "skyglow"))
+```
+
+
+## Transforming your data with `filter()`
+
+```{r}
+ggplot(sky_satellite, aes(x = wavelength, y = intensity, 
+                           color = sky_type)) + geom_line()
+```
+
+# Testing your test assumptions
+
+## Testing for normality
+
+```{r}
+ggplot(chickwts, aes(x = weight)) + geom_histogram(bins = 7)
+```
+
+
+## Testing for normality
+```{r eval = F}
+shapiro.test(chickwts$weight) #you can do this
+
+chick_weight <- chickwts$weight
+shapiro.test(chick_weight) #or this, if you're fancy
+```
+
+
+## Testing for normality
+```{r}
+shapiro.test(chickwts$weight)
+```
+
+
+## Testing for normality
+```{r echo=FALSE}
+ggplot(chickwts, aes(x = weight)) + 
+  geom_histogram(bins = 5) + facet_wrap("feed")
+```
+
+```{r eval=F}
+ggplot(chickwts, aes(x = weight)) + 
+  geom_histogram(bins = 5) + facet_wrap("feed")
+```
+
+
+## Testing for normality
+```{r echo=FALSE}
+ggplot(chickwts, aes(x = weight)) + 
+  geom_histogram(bins = 5) + facet_wrap("feed")
+```
+
+Test animal (meatmeal, casein) and vegetable (everything else) feed types for normality separately!
+
+
+## Testing for normality
+```{r warning=FALSE}
+chick_animal <- chickwts %>% 
+  filter(feed == "meatmeal" | feed == "casein") %>%
+  mutate(diet = "animal")
+chick_veggie <- chickwts %>% 
+  filter(feed != "meatmeal" & feed != "casein") %>%
+  mutate(diet = "veggie")
+shapiro.test(chick_animal$weight)
+shapiro.test(chick_veggie$weight)
+```
+
+
+## Testing for normality
+```{r warning=FALSE}
+chick_animal <- chickwts %>% 
+  filter(feed == "meatmeal" | feed == "casein") %>%
+  mutate(diet = "animal")
+chick_veggie <- chickwts %>% 
+  filter(feed != "meatmeal" & feed != "casein") %>%
+  mutate(diet = "veggie")
+chick_diet = bind_rows(chick_animal, chick_veggie)
+head(chick_diet)
+```
+
+
+## Testing for normality
+
+```{r echo=FALSE}
+ggplot(chick_diet, aes(x = weight)) + 
+  geom_histogram(bins = 6) + facet_wrap("diet")
+```
+
+
+## Testing for equal variance
+```{r eval=F, message=FALSE, warning=FALSE}
+library(car)
+leveneTest(weight~diet, data = chick_diet)
+```
+
+## Testing for for equal variance
+```{r message=FALSE, warning=FALSE}
+library(car)
+leveneTest(weight~diet, data = chick_diet)
+```
+
+# Normal probability plots with `ggplot2`
+
+## Normal probability plots with `ggplot2`
+```{r}
+chick_qq <- ggplot(chick_diet, aes(sample = weight)) + 
+  geom_qq() + geom_qq_line()
+```
+
+
+## Normal probability plots with `ggplot2`
+```{r}
+chick_qq
+```
+
+
+## Normal probability plots with `ggplot2`
+```{r}
+chick_qq  + facet_wrap("diet")
+```
+
+
+## Normal probability plots with `ggplot2`
+```{r}
+chick_qq  + facet_wrap("diet") + coord_flip()
+```
+
+
+## Normal probability plots with `ggplot2`
+```{r}
+chick_qq_complete <- ggplot(chick_diet, aes(sample = weight)) + 
+  geom_qq() + geom_qq_line() + facet_wrap("diet") + coord_flip()
+```
+
+# Non-parametric tests (part 1 of 2)
+
+## Non-parametric tests (part 1 of 2)
+Mann-Whitney U Test: the non-parametric equivalent of an independent two-sample t-test!
+
+```{r}
+# t.test(weight~diet, data = chick_diet)
+wilcox.test(weight~diet, data = chick_diet) 
+```
+
+#Putting it all together
+
+##Putting it all together
+
+```{r}
+titanic <- read.csv("titanic.csv")
+head(titanic)
+```
+
+## Putting it all together
+
+1. Test the fare of two groups (survivors and non-survivors) for normality
+   a. Histogram (hint:`facet_wrap()`)
+   b. Normal probability plot
+   c. Shapiro-Wilk normality test
+   d. Levene's test for equal variance
+2. Make any data transformations necessary
+3. Do a t-test on the transformed data
+4. Compare the results with a Mann-Whitney U test
+
+
+##Putting it all together
+
+1a. Histogram
+
+```{r fig.height=3.5}
+ggplot(titanic, aes(x = fare)) + geom_histogram(bins=8) +
+  facet_wrap("survived")
+```
+
+
+##Putting it all together
+
+1b. Normal probability plot
+
+```{r fig.height=3.5}
+ggplot(titanic, aes(sample = fare)) + geom_qq() + geom_qq_line() +
+  facet_wrap("survived") + coord_flip()
+```
+
+##Putting it all together
+
+1c. Shapiro-Wilk normality test
+
+First, split data by survival
+
+```{r}
+titanic_dead <- titanic %>% filter(survived == "died")
+titanic_alive <- titanic %>% filter(survived == "survived")
+```
+
+
+##Putting it all together
+
+1c. Shapiro-Wilk normality test
+
+```{r}
+shapiro.test(titanic_dead$fare)
+shapiro.test(titanic_alive$fare)
+```
+
+##Putting it all together
+
+1d. Levene's test for equal variance
+
+```{r}
+leveneTest(fare~survived, data = titanic)
+```
+
+##Putting it all together
+
+2. Data transformations
+
+```{r fig.height=2.5}
+titanic_transformed <- titanic %>%
+  mutate(fare_log = log(fare))
+ggplot(titanic_transformed, aes(x = fare_log)) + geom_histogram(bins=8) +
+  facet_wrap("survived")
+```
+
+##Putting it all together
+
+2. Data transformations
+
+Can't take the log of 0!
+
+```{r}
+titanic_transformed %>% filter(fare == 0) %>% head()
+```
+
+
+##Putting it all together
+
+2. Data transformations
+
+```{r fig.height=2.5}
+titanic_transformed <- titanic %>%
+  mutate(fare_log = log(fare + 1))
+ggplot(titanic_transformed, aes(x = fare_log)) + geom_histogram(bins=8) +
+  facet_wrap("survived")
+```
+
+
+##Putting it all together
+
+3. Do a t-test on the transformed data
+
+```{r}
+t.test(fare_log~survived, data = titanic_transformed)
+```
+
+##Putting it all together
+
+4. Compare the results with a Mann-Whitney U test
+
+```{r}
+# t.test(fare_log~survived, data = titanic_transformed)
+wilcox.test(fare~survived, data = titanic)
+```
+
+# Homework time!

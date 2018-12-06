@@ -1,0 +1,336 @@
+---
+title: "More fun with t-tests in R"
+author: "Avalon C.S. Owens, Eric R. Scott"
+date: "10/12/2018"
+output:
+  pdf_document: default
+  ioslides_presentation: default
+---
+```{r include=FALSE}
+library(PairedData)
+library(tidyverse)
+library(ggplot2)
+library(reshape2)
+library(dplyr)
+library(knitr)
+knitr::opts_chunk$set(error = TRUE)
+```
+
+
+## Plan for today
+- Performing paired t-tests in R
+- Plotting paired data with `ggplot2`
+
+
+# Doing paired t-tests in R
+
+## The t-distribution
+
+```{r echo=FALSE}
+x <- seq(-6, 6, length=100)
+distributions <- data.frame(x = x, 
+                   t1 = dt(x,1),
+                   t3 = dt(x,2),
+                   t8 = dt(x,8),
+                   normal = dnorm(x))
+distributions <- melt(distributions, id=c("x"))
+ggplot(distributions, aes(x = x, y = value, color = variable)) + 
+  geom_line(size = 0.75) + labs(x = "x", y = "Probability density") +
+  scale_color_discrete(name="", labels=c("1 df", "3 df", "8 df", "normal"))
+```
+
+
+## Data for today
+
+<img src="beavers.jpg" alt="Drawing" style="height: 450px;"/> 
+
+## Data for today
+
+```{r}
+head(beaver1, 4)
+head(beaver2, 4)
+```
+
+
+## One-sample t-test
+
+$$t = \frac{\bar{Y}-\mu_{0}}{SE_{\bar{Y}}}$$
+
+$\mu_0$ = population mean (under $H_0$)
+
+$\bar{Y}$ = sample mean
+
+$SE_{\bar{Y}}$ = sample SE
+
+## One-sample t-test
+
+$H_0$: $\mu$ = 37
+
+```{r}
+t.test(beaver1$temp, mu = 37)
+```
+
+
+## Two-tailed one-sample t-test
+
+$H_0$: $\mu$ = 37
+
+```{r}
+t.test(beaver1$temp, mu = 37, alternative = "two.sided") #the default
+```
+
+
+## One-tailed one-sample t-test
+
+$H_0$: $\mu$ $\geq$ 37
+
+```{r}
+t.test(beaver1$temp, mu = 37, alternative = "less")
+```
+
+
+## One-tailed one-sample t-test
+
+$H_0$: $\mu$ $\leq$ 37
+
+```{r}
+t.test(beaver1$temp, mu = 37, alternative = "greater")
+```
+
+
+## Independent two-sample t-test
+
+$$t = \frac{(\bar{Y_1}-\bar{Y_2})}{SE_{\bar{Y_1}-\bar{Y_2}}}$$
+
+## Independent two-sample t-test
+
+$H_0$: $\mu_1$ = $\mu_2$
+
+```{r}
+t.test(beaver1$temp, beaver2$temp)
+```
+
+
+## Independent two-sample t-test
+
+$H_0$: $\mu_1$ = $\mu_2$
+
+```{r}
+t.test(beaver1$temp, beaver2$temp, var.equal = FALSE) #the default
+```
+
+
+## Independent two-sample t-test
+
+$H_0$: $\mu_1$ = $\mu_2$
+
+```{r}
+t.test(beaver1$temp, beaver2$temp, var.equal = TRUE) #equal variance
+```
+
+
+## Independent two-sample t-test
+
+$H_0$: $\mu_1$ = $\mu_2$
+
+```{r}
+t.test(temp ~ activ, data = beaver1) #formula interface
+```
+
+# REVIEW PART 1: TIDY DATA
+
+## REVIEW PART 1: TIDY DATA
+
+```{r}
+beaver_one <- beaver1 %>%
+  add_column("beaver_ID" = 1)
+
+beaver_two <- beaver2 %>%
+  add_column("beaver_ID" = 2)
+
+beavers <- bind_rows(beaver_one, beaver_two)
+
+str(beavers)
+```
+
+## Independent two-sample t-test
+
+$H_0$: $\mu_1$ = $\mu_2$
+
+```{r}
+t.test(temp ~ beaver_ID, data = beavers) #formula interface
+```
+
+
+## Independent two-sample t-test
+
+$H_0$: $\mu_1$ = $\mu_2$
+
+```{r}
+t.test(beaver1$temp, beaver2$temp) #x, y interface
+```
+
+
+## Paired-sample t-test
+
+$$t = \frac{\bar{d}-\mu_{d0}}{SE_{\bar{d}}}$$
+
+## Paired-sample t-test
+
+```{r}
+head(beaver1, 4)
+head(beaver2, 4)
+```
+
+Are these data paired?
+
+## Paired-sample t-test
+
+```{r}
+t.test(beaver1$temp, beaver2$temp, paired = TRUE)
+```
+
+## Paired-sample t-test
+
+```{r}
+head(beaver1, 4)
+tail(beaver1, 4)
+```
+
+Are these data paired?
+
+
+## Paired-sample t-test
+
+```{r}
+t.test(beaver1$temp ~ beaver1$activ, paired = TRUE)
+```
+
+ALSO: The formula interface is ONLY FOR 2-sample t-tests
+
+
+## More data for today
+
+<img src="horse.jpg" alt="Drawing" style="height: 447px;"/> 
+
+
+## More data for today
+
+```{r message = F}
+library(PairedData)
+data(HorseBeginners)
+HorseBeginners
+```
+
+Are these data paired?
+
+
+## Paired sample t-test
+
+```{r}
+t.test(HorseBeginners$Actual, HorseBeginners$Imaginary, paired = TRUE)
+```
+
+
+# Back to the help file
+
+## Back to the help file
+
+```{r eval = F}
+t.test(x, y = NULL,
+       alternative = c("two.sided", "less", "greater"),
+       mu = 0, paired = FALSE, var.equal = FALSE,
+       conf.level = 0.95, ...)
+```
+
+
+# Plotting paired data with `ggplot2`
+
+## Plotting paired data with `ggplot2`
+
+```{r}
+HorseBeginners
+```
+
+Are these data tidy?
+
+# REVIEW PART 2: TIDY DATA
+
+## REVIEW PART 2: TIDY DATA
+
+```{r}
+horse_tidy <- gather(HorseBeginners, 
+                     key = "Status", value = "Time")
+```
+
+
+## REVIEW PART 2: TIDY DATA
+
+```{r}
+head(horse_tidy, 14)
+```
+
+
+## REVIEW PART 2: TIDY DATA
+
+```{r}
+horse_tidy <- gather(HorseBeginners, -Subject, 
+                     key = "Status", value = "Time")
+head(horse_tidy, 12)
+```
+
+## Plotting paired data with `ggplot2`
+
+```{r}
+horse_plot <- ggplot(horse_tidy, aes(x = Status, 
+                                     y = Time, 
+                                     group = Subject)) +
+  geom_point() + geom_line() +
+  labs(x = "Performance", y = "Duration (s)")
+```
+
+
+## Plotting paired data with `ggplot2`
+
+```{r}
+horse_plot
+```
+
+
+## Plotting paired data with `ggplot2`
+
+```{r}
+head(horse_tidy, 3)
+horse_tidy$Status <- factor(horse_tidy$Status,
+                            levels = c("Imaginary", "Actual"))
+head(horse_tidy, 3)
+```
+
+
+## Plotting paired data with `ggplot2`
+
+```{r}
+horse_plot <- ggplot(horse_tidy, aes(x = Status, 
+                                     y = Time, 
+                                     group = Subject)) +
+  geom_point() + geom_line() +
+  labs(x = "Performance", y = "Duration (s)")
+```
+
+
+## Plotting paired data with `ggplot2`
+
+```{r}
+horse_plot
+```
+
+
+# Errors vs. warnings
+
+
+# Piazza
+
+
+# Homework time!
+
+

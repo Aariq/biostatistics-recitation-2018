@@ -1,0 +1,256 @@
+---
+title: "Recitation - Week 6"
+output:
+  word_document: default
+  pdf_document: default
+  html_notebook: default
+---
+```{r include=FALSE}
+library(dplyr)
+```
+
+
+# 1. Explanation of notebook formatting
+Write your answers outside of code chunks!  Helpful tips:
+
+  - Markdown
+    + Create headings using different numbers of "#"'s
+    + **bold**, *itallics*
+    + lists
+      1. one
+      2. two
+      3. three
+    + bullets
+  - In-line code e.g.(`r rnorm(2)`)
+  - Spell-check
+  - Tables with `kable()` 
+    + please do `kable(head(data))` if importing from .csv you made so we can see what it contains
+  - Error Knitting? Try "Restart R and Run All Chunks" from the Run button
+  
+```{r}
+library(knitr)
+kable(head(sleep))
+```
+
+
+
+```{r}
+
+# write code here
+
+```
+
+
+# 2. Power analyses for t-tests. 
+
+Today, we will be learning how to do power analysis in R. We will introduce the power functions in package "pwr". 
+
+This package has power analyses for many different tests. 
+- Two proportions/binomial, # pwr.2p.test()
+- T-tests, # pwr.t.test()
+- Chi-squared test, # pwr.chisq.test
+- One way ANOVA, # pwr.anova.test
+- Linear models, # pwr.f2.test
+- Correlation, # pwr.r.test
+
+Since we have not discussed many of these tests in lecture yet. We will only explore the two t-test options. But first, you will need to install the pwr package before running the code below.
+   
+We can do a power analysis before we conduct an experiment to understand what sample size is good enough to be certain that our conclusions are accurate. It is particularly good when you have limited resources - potential to waste resources by collecting too much data than necessary or waste a whole experiment (effort, money, etc) by not collecting enough and you do not have enough power to conclude anything. We can conduct a power analysis ad hoc to understand the accuracy around our statistical results
+
+We need to define four of the five arguments, and the fifth is what we want to know given the other set of parameters. The five arguments are:
+
+- sample size (n), 
+- the effect size (ES), which is the difference between means divided by the standard deviation. 
+- significant level (sig.level) which is type 1 error (Reject null, but true! You should have rejected)
+- the power of test (power) which is 1 - type 2 error (Accept the null, but false! You should have accepted)
+
+
+```{r}
+
+library(pwr)
+
+# What sample size is required for a statistical power of 0.8 (1 - probability of type 2 error) and a significant level of 0.05 (type 1 error) where the sample has an effect size of 0.5. 
+
+pwr.t.test(n = NULL, d = 0.5, power = 0.8, sig.level = 0.05, type = "one.sample")
+
+# What if you had a dataset comparing two samples and the observations per group is 20 and the effect size is 0.5. What would be the power?
+
+pwr.t.test(n = 20, d = 0.5, sig.level = 0.05, type = "two.sample")
+
+
+# What if we want to test different effect sizes on the statistical power of our experiment?
+effect.size <- seq(0, 5, length.out=50)
+
+i = 1
+pwr.t.test(n = 20, d = effect.size[i], sig.level = 0.05, type = "two.sample")$power
+
+i = 2
+pwr.t.test(n = 20, d = effect.size[i], sig.level = 0.05, type = "two.sample")$power
+
+# Now we can do this more quickly with a loop 
+
+power <- NA
+for(i in 1:length(effect.size)){
+  power[i]<-pwr.t.test(n = 20, d = effect.size[i], sig.level = 0.05, type = "two.sample")$power
+}
+power # power will be high if there is a larger difference in means
+
+# We can plot these results if we wanted. 
+
+par(mar=c(5,6,4,4)) # mar argument adjusts the margins around the plot, allows for more room
+plot(effect.size, power, xlab="Effect size, ES", ylab="Statistical power 
+     (1 - prob of type 2 error)", cex.axis=1.2, cex.lab=1.4, type="l", lwd=2)
+
+par(mar=c(5,5,4,4))
+plot(effect.size, 1-power, xlab="Effect size, ES", ylab="Probability of type 2 error", cex.axis=1.2, cex.lab=1.4, type="l", lwd=2)
+
+# Play around with these numbers, you can specify multiple observation n values
+
+cont <- as.data.frame(matrix(0, ncol = 3, nrow = 7100))
+
+obs<-seq(10, 151, 1)
+for(i in 1:length(effect.size)){
+  for(j in 1:length(obs)){
+      cont[(j+i)-1,3]<-pwr.t.test(n = obs[j], d = effect.size[i], sig.level = 0.05, type = "two.sample")$power
+      cont[(j+i)-1,1]<-effect.size[i]
+      cont[(j+i)-1,2]<-obs[j]
+  }
+}
+
+power # power will be high if there is a larger difference in means
+
+
+
+```
+
+# 2. Use sleep data to calculate the power of a two sample t-test 
+
+```{r}
+
+data(sleep)
+head(sleep)
+
+m1<-with(sleep, t.test(extra ~ group, alternative="two.sided"))
+
+stats <- sleep %>% group_by(group) %>% summarise(mean = mean(extra),
+                                                 sd = sd(extra))
+
+pooled.sd <- sqrt((stats$sd[1]^2 + stats$sd[2]^2) / 2)
+effect.size <- (stats$mean[1] + stats$mean[2]) / pooled.sd
+
+
+pwr.t.test(n = 10, d = effect.size, power = NULL, sig.level = 0.05, type = "two.sample", alternative = "two.sided")
+
+# Power is 0.92, 8% probability of getting a type 2 error
+
+
+```
+
+
+** 3. Exercise **
+
+*Description* : Researchers wanted to know whether children with parents who work at a lead related factory have higher blood lead levels than children in their respective neighbourhoods. The dataset had blood lead levels (uL/dL) for 33 children with parents who worked at the lead related factory, and 33 control children with parents who did not. They selected a control child in each one of the experiment child neighbourhoods to eliminate the potential effect of their neighbourhood on influencing their blood lead levels.  
+
+*Question* : Conduct the six step procedure for hypothesis testing for this particular dataset. Then plot your data appropriately. 
+
+
+# Step 1. State hypothesis
+
+Null: children with parents who work at a lead related factor do not have blood lead levels than are different to children with parents who do not. u0 = u1
+
+Alternative: children with parents who work at a lead related factor have higher blood lead levels than are different to children with parents who do not. u0 /=/ u1
+
+# Step 2. Choose your test
+
+Paired t-test - since every child in the lead group are paired with control child in their neighbourhood to account for any effects of the neighbourhood on lead levels. 
+
+One-tailed - we are testing whether blood lead levels are higher in children from the lead group compared to the control. 
+
+
+```{r}
+
+lead <- read.csv("Lead.csv")
+head(lead)
+
+m1 <- with(lead, t.test(Exposed, Control, alternative = "greater", paired=TRUE))
+m1
+
+# Step 3. Calculate your t statistic
+
+m1$statistic
+
+# Step 4. Compare your test statistic to the critical values, e.g. calculate your p value (probability of getting your t value given your null is true)
+
+m1$p.value # very very low probability that you got your t value (or that you got your data) given your null is true.
+
+
+```
+
+
+# Step 5. Evaluate the evidence regarding H0 & make a decision
+
+We can reject the null hypothesis. 
+
+# Step 6. Evaluate the evidence regarding H0 & make a decision
+
+Children with parents who work at a lead related factory have higher blood lead levels than children with parents who do not (paired t-test, T = 5.783, df = 32, P < 0.001).
+
+```{r}
+
+library(tidyr)
+
+newdata <- gather(lead, "Group", "Lead", 3:4)
+
+# 1. Box plot
+
+par(mar=c(5,5,4,4))
+with(newdata, boxplot(Lead ~ Group, xlab="Lead exposure from parents workplace", ylim=c(0, 80), ylab="Blood lead levels (uL/dL)", cex.axis=1.2, cex.lab=1.4))
+abline(h = 45, lwd=2, lty=2) # lead levels above 45 ug/dL requires treatment
+abline(h = 5, lwd=2, lty = 3) # above this level, we need to monitor (since 2012)
+
+# 2. Interaction plot (too messy though!)
+
+with(newdata, 
+     interaction.plot(x.factor = Group,   #The factor that appears on the x-axis
+                      trace.factor = Pair,  #It will draw separate lines for each level of the trace.factor
+                      response = Lead,   #The measured variable
+                      fixed = TRUE,       #This just makes the ID's appear in descentding order in the legend
+                      xlab = "Lead exposure from parents workplace",
+                      ylab = "Blood lead levels (ug/dL)"))
+
+# 3. Barplot 
+
+stats <- newdata %>% group_by(Group) %>% summarise(mean = mean(Lead),
+                                                   sd = sd(Lead),
+                                                   se = sd(Lead)/sqrt(n()))
+
+barcenters<-with(stats, barplot(mean, names.arg=Group, col="grey80", ylim=c(0, 40), xlab="Lead exposure from parents' workplace", ylab ="Blood lead levels (ug/dL)"))
+arrows(barcenters, stats$mean + stats$se, barcenters, stats$mean - stats$se, angle=90, code=3)
+
+
+# 4. Barplot-like scatterplot (twitter version shown in lecture)
+
+newdata$GroupNum <- NA # create a new column in our dataset called "GroupNum"
+
+for(i in 1:nrow(newdata)){  # In words, for each row of the dataset (from 1 to the total number of rows), substitue each value where i is located below:
+  
+  if( newdata$Group[i] == "Exposed" ) { newdata$GroupNum[i] = 2 } else { newdata$GroupNum[i] = 1 } # If the value in the Group column equals "control"" then assign it a value of 1 in a new column called GroupNum ... otherwise assign it a value 2 (for Exposed)
+
+  } # end loop
+
+
+
+head(newdata) # new column that matches the Group column, but integers instead!
+
+
+with(newdata, plot(Lead ~ GroupNum, xaxt="n", xlim=c(0.5,2.5), ylim=c(0, 80), xlab="Lead exposure from parent workplace", ylab="Blood lead levels (ug/dL)"))
+axis(1, at=c(1,2), labels=c("Control","Exposed"))
+arrows(c(1,2), stats$mean + stats$se, c(1,2), stats$mean - stats$se, angle=90, code=3, lwd=2)
+points(c(1,2), stats$mean, pch=19, col="black")
+
+
+```
+
+
+```
+

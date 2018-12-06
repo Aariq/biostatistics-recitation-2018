@@ -1,0 +1,271 @@
+---
+title: 'Recitation Week 8: analysis of variance (ANOVA)'
+output:
+  html_notebook: default
+---
+
+**Week 8 recitation** will prepare you for the next problem set (#9) by teaching you how analyse data with more than two groups, which is one constraint of the Student's T Test. ANOVA compares the means of two or more groups that are normally distributed.
+
+```{r libraries}
+#packages you will need for this notebook to run
+library(car)
+library(dplyr)
+library(ggplot2)
+library(ggformula)
+```
+
+# Warm-up exercise
+
+## Step 1 - State your formal statistical hypotheses
+
+Null = whether a female is fed or starved has no effect of their time to mating, 
+
+      H0: µ_fed = µ_starved
+      
+Alternative = a starved female will have a different time to mating than a fed female. # could also be less time 
+
+      HA: µ_fed ≠ µ_starved
+      
+## Step 2 - Choose an appropriate statistical test, and justify your choice. And test for its assumptions. 
+
+I initially chose a two sample, two tailed t-test to analyses these data because they were interested in whether females fed or starved have different time to mating. These data on a log scale have equal variances, but not are normally distributed. Therefore, I decided to use a Mann-Whitney U test, which is a non-parametric version of the two-sample t-test. 
+
+### Load data and visualize
+```{r}
+crickets <- read.csv("SagebrushCrickets.csv")
+head(crickets)
+
+hist(crickets$timeToMating)
+hist(log(crickets$timeToMating))
+hist(sqrt(crickets$timeToMating))
+```
+
+### Check assumptions of pooled variance t-test
+```{r}
+leveneTest(timeToMating ~ feedingStatus, data = crickets)
+leveneTest(log(timeToMating)~ feedingStatus, data=crickets) # equal variances when log transformed
+leveneTest(sqrt(timeToMating)~ feedingStatus, data=crickets)
+```
+
+### Check assumptions of normality
+remember for t-tests to check the assumptions on the correct thing.
+```{r}
+library(dplyr)
+norm <- crickets %>% #take the crickets data set, then...
+  group_by(feedingStatus) %>% #group by feeding status, then...
+  #create a summary table containing three columns containing p.values of the shapiro test on original and transformed data (by feeding status)
+  summarise(shap.p = shapiro.test(timeToMating)$p.value,  
+            shap.sqrtp =shapiro.test(sqrt(timeToMating))$p.value,
+            shap.logp = shapiro.test(log(timeToMating))$p.value)
+norm
+```
+
+## Step 3 - Calculate the test statistic
+
+
+```{r}
+#parametric
+m1 <- t.test(log(timeToMating) ~ feedingStatus, data=crickets) 
+# still violates assumption of normality
+m1$statistic
+
+#non-parametric
+m2 <- wilcox.test(timeToMating ~ feedingStatus, data=crickets) # could do non-parametric test
+m2$statistic
+```
+## Step 4 - Compare the calculated test statistic to a reference set
+
+```{r}
+m1$p.value
+m2$p.value
+```
+
+## Step 5 - Evaluate the evidence regarding H0 & make a decision
+
+We accept null hypothesis
+
+## Step 6 - Write a concise summary statement 
+
+Starved and fed female crickets do not differ in their time to mating (Wilcox Rank Sum test, W = 88, P = 0.361).
+
+
+# Introducing ANOVA and its assumptions
+
+So far, we've been running t-tests on my nectar return dataset. In these previous recitations, we were asking you to compare two colonies and their resource return (or worker body sizes), or provided you with a truncated dataset that only had two colonies. However, my demography study included *8 colonies* in total. Therefore, if we want to know if all colonies differed in their body size or nectar return. We would want to use an ANOVA. 
+
+```{r}
+nect <- read.csv("BeeNectar.csv")
+head(nect)
+
+table(nect$Colony) # shows sample sizes in each Colony
+
+# Colony #22 had only one worker. When these colonies were relocated outside, the queen from colony #22 left and therefore no more data were collected for this colony. Subset to remove colony #22
+nect.new <- subset(nect, Colony!=22)
+
+str(nect.new) # shows the structure of the data
+class(nect.new$Colony) #tells you the "class" of a particular objct (numeric, character, factor, etc.)
+
+nect.new$Colony <- as.factor(nect.new$Colony) #convert "Colony" to a factor
+```
+
+## Testing assumptions
+ANOVA assumes homogeneity of variances and normally distributed *residuals*
+
+### Levene's Test
+Check for homogeneity of variances
+
+```{r}
+leveneTest(Nectar~Colony, data = nect.new)
+```
+Doesn't pass
+
+### Extract residuals and check normality
+Setting up the ANOVA model and extracting residuals
+```{r}
+nectar.aov <- aov(Nectar~Colony, data = nect.new) #sets up the ANOVA model
+nectar.resids <- data.frame(residuals = nectar.aov$residuals) #extracts the residuals from the model into a new data frame
+```
+
+Plotting residuals
+```{r}
+ggplot(nectar.resids, aes(x = residuals)) +
+  geom_histogram(bins = 8)
+
+ggplot(nectar.resids, aes(sample = residuals)) +
+  geom_qq() +
+  stat_qqline()+
+  coord_flip()
+```
+
+Shapiro Test on residuals
+```{r}
+shapiro.test(nectar.aov$residuals)
+```
+Very Not Normal
+
+Let's try some transformations
+```{r}
+log.nectar.aov <- aov(log(Nectar) ~ Colony, data = nect.new)
+sqrt.nectar.aov <- aov(sqrt(Nectar) ~ Colony, data = nect.new)
+```
+
+Shapiro-Wilk's test on transformed residuals
+```{r}
+shapiro.test(log.nectar.aov$residuals)
+shapiro.test(sqrt.nectar.aov$residuals)
+```
+Neither transformation is a huge improvement.
+
+Because our sample sizes are relatively large, then using ANOVA might be okay in this case. 
+
+```{r}
+table(nect.new$Colony)
+```
+
+## Do the ANOVA
+Get an ANOVA table with a p-value using `anova()`
+
+```{r}
+anova(nectar.aov)
+```
+Notice that R labels the ANOVA table slightly differently than your book.  `Colony` is the between (among) groups variation, but the name will be whatever your factor is.  `Residuals` are the same as Error or Within-Group variation.
+
+
+## Non-Parametric Kruskal Wallis
+Kruskal-Wallis is a non parametric equivalent to ANOVA
+```{r}
+kruskal.test(Nectar ~ Colony, data = nect.new)
+```
+
+# Exercise 1: Circadian
+
+**Description** - comparing phase shift in the circadian rhythm of melatonin production in participants given alternative light treatments. 
+
+**Question** - Conduct the six step procedure for hypothesis testing for this particular dataset. When selecting the appropriate test to analyse your data (Step 2), please also determine whether your data conforms to assumptions of normality given your test assumes normally distributed data. Then after the six steps, plot your data appropriately. 
+
+## Step 1 - State your formal statistical hypotheses
+
+Null = the phase shifts in the circadian rhythm of melatonin production does not differ among light treatments, 
+      H0: µ_control = µ_eye = µ_knee
+Alternative = the phase shifts in the circadian rhythm of melatonin production does differ among light treatments
+      HA: at least one mean is different
+      
+## Step 2 - Choose an appropriate statistical test, and justify your choice. And test for its assumptions. 
+
+I choose analsis of variance (ANOVA) to analyses these data because they were interested in whether light regime alters the phase shift of melatonin production. These data are normally distributed and all groups have equal variances. 
+
+```{r}
+#read in data
+cir <- read.csv("CircadianShift.csv")
+head(cir)
+```
+Tests assumption of homogeneity of variances
+```{r}
+leveneTest(shift~treatment, data = cir)
+```
+
+Set up ANOVA model and check normality
+```{r}
+cir.aov <- aov(shift~treatment, data = cir)
+shapiro.test(cir.aov$residuals)
+cir.aov.resids <- data.frame(residuals = cir.aov$residuals)
+
+ggplot(cir.aov.resids, aes(x = residuals)) +
+  geom_histogram(bins = 5)
+
+ggplot(cir.aov.resids, aes(sample = residuals)) +
+  geom_qq() +
+  stat_qqline() +
+  coord_flip()
+```
+Looks good
+
+## Step 3 - Calculate the test statistic
+```{r}
+anova(cir.aov)
+```
+F = 7.2894
+
+## Step 4 - Compare the calculated test statistic to a reference set
+p = 0.0045
+
+
+*Step 5* - Evaluate the evidence regarding H0 & make a decision
+
+We reject the null hypothesis
+
+*Step 6* - Write a concise summary statement 
+
+Light treatment significantly alters the phase shift in the circadian rhythm of melatonin production in patients (one-way ANOVA; F = 7.289; df = 2,19; P = 0.004).
+
+
+## Plot data
+
+```{r}
+# Boxplot 
+boxplot(shift ~ treatment, data=cir)
+
+## With ggplot2
+ggplot(cir, aes(x = treatment, y = shift)) +
+  geom_boxplot()
+```
+
+
+Advanced plotting
+
+```{r}
+cir$GroupNum <- as.integer(cir$treatment) # create a new column in our dataset called "GroupNum" that is a numeric representation of treatment column
+
+stats <- cir %>%   #take the "cir" data set then...
+  group_by(treatment) %>%   # group it by treatment, then...
+  summarise(mean = mean(shift),  # create a summary table with the mean and SEM
+            se = sd(shift)/length(n()))
+
+with(cir, plot(shift ~ GroupNum, xaxt="n", ylim=c(-2.5,2.5), xlim=c(0.5, 3.5), xlab="Treatment", ylab="Circadian shift"))
+axis(1, at=c(1,2,3), labels=c("Control","Eyes", "Knees"))
+arrows(c(1.1,2.1,3.1), stats$mean + stats$se, c(1.1,2.1,3.1), stats$mean - stats$se, angle=90, code=3, lwd=1)
+points(c(1.1,2.1,3.1), stats$mean, pch=19, col="black")
+abline(h=0, lwd=2, lty=2)
+
+```
+

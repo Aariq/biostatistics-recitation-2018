@@ -1,0 +1,21 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(here)
+```
+```{r}
+titanic <- read_csv(here("Week 8", "titanic-original.csv"))
+```
+
+```{r}
+titanic %>%
+  mutate(survived = ifelse(survived == 1, "survived", "died"),
+         Gender = ifelse(Gender == 0, "M", "F")) %>% 
+  filter(!is.na(fare)) %>% 
+  write_csv(here("Week 8", "titanic2.csv"))
+```
+

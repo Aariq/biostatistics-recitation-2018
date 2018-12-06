@@ -1,0 +1,304 @@
+---
+title: "Multiple comparisons in R"
+author: "Avalon C.S. Owens, Eric R. Scott"
+date: "11/09/2018"
+output:
+  ioslides_presentation:
+    widescreen: yes
+  pdf_document: default
+  html_document:
+    df_print: paged
+  beamer_presentation: default
+---
+Note: This was edited *after* the recitation to do Bonferroni tests correctly.
+
+##  Packages and data sets
+
+```{r include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(error = TRUE)
+```
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(DescTools)
+library(dunn.test)
+```
+
+## Plan for today
+
+- Tukey-Kramer tests with `TukeyHSD()`
+- Bonferroni test for specific comparisons
+- Dunnett's test with `DunnettTest()`
+- Dunn's test with `dunn.test()`
+- more fun with `ggplot2`
+    + putting letters on plots with `geom_text()`
+    + reordering plotted data with `factor()`
+
+# But first... (a note about cheatsheets)
+
+
+## Tukey-Kramer tests with `TukeyHSD()`
+
+The Tukey-Kramer test runs all possible pairwise comparisons (all-ways comparisons) and produces a summary of which pairs are statistically different
+
+```{r}
+titanic <- read.csv("titanic.csv")
+titanic.aov <- aov(fare ~ nationality, data = titanic)
+anova(titanic.aov)
+TukeyHSD(titanic.aov)
+```
+
+## Try on your own!
+
+Try using `TukeyHSD()` on the air quality data set. Then compare the p-values you got from Tukey HSD to those you got from the Bonferroni test.
+
+```{r}
+air.aov <- aov(Ozone ~ factor(Month), data = airquality)
+anova(air.aov)
+```
+
+## Tukey-Kramer tests with `TukeyHSD()`
+
+```{r}
+TukeyHSD(air.aov)
+```
+
+
+
+# Bonferroni Test
+
+## Bonferroni test
+
+- More powerful because it's on a subset of all possible comparisons.
+- Uses pooled standard deviation from ANOVA, so better than doing individual t-tests.
+
+$$
+\alpha^* = \frac{\alpha}{n_{tests}}
+$$
+*OR*
+
+$$
+p^* = p \times n_{tests}
+$$
+
+## Implementing Bonferroni test in R
+
+1. Do ANOVA, if significant...
+2. Choose comparisons of interest
+3. Use `pairwise.t.test()` with **no** p-value adjustment
+4. Adjust p-values from comparisons of interest with `p.adjust()` (or using math) 
+
+## Example: `airquality`
+
+Does Ozone differ by Month?
+
+```{r}
+head(airquality)
+```
+
+## Step 1: ANOVA
+
+(note: `Month` has to be manually converted to a factor)
+
+```{r}
+ozone.aov <- aov(Ozone ~ factor(Month), data = airquality)
+anova(ozone.aov)
+```
+
+## Visualize Data
+
+```{r echo=FALSE, warning=FALSE}
+ggplot(airquality, aes(x = as.factor(Month), y = Ozone, fill = as.factor(Month))) +
+  geom_boxplot() + labs(x = "Month", y = "Mean ozone (ppb)")
+```
+
+## Step 2: choose comparisons
+
+Let's say you just want to know about how summer months compare to eachother
+
+Comparisons of interest:
+
+- June vs. July
+- June vs. August
+- July vs. August
+
+## Step 3: `pairwise.t.test()`
+
+```{r}
+pairwise.t.test(airquality$Ozone, airquality$Month, p.adjust.method = "none")
+```
+
+## Step 4: Adjust p-values for comparisons of interest
+
+- June vs. July: p = 0.01023
+- June vs. August: p = 0.00831
+- July vs. August: p = 0.91744
+
+```{r}
+ps <- c(0.01023, 0.00831, 0.91744)
+p.adjust(ps, method = "bonf")
+ps * length(ps) #does almost the same thing
+```
+
+
+## Dunnett's test with `DunnettTest()`
+
+Dunnett's test runs pairwise comparisons of experimental groups against a control (many-to-one comparisons) and produces a summary of which pairs are statistically different
+
+```{r}
+library(DescTools)
+
+DunnettTest(weight ~ feed, data = chickwts, control = "soybean")
+```
+
+
+## Dunnett's test with `DunnettTest()`
+
+Try using `DunnettTest()` on the air quality data set!
+```{r}
+DunnettTest(Ozone ~ factor(Month), data = airquality, control = "9")
+```
+
+
+## Dunn's test with `dunn.test()`
+
+Dunn's test is for non-parametric multiple comparisons (ANOVA vs. Kruskal-Wallis)
+
+I remember last year there being some confusion about the p-value adjustment method.  I think the book/slides don't teach an optional adjustment method, but Dunn's method was equivalent to bonferroni I think. Maybe.
+
+```{r}
+library(dunn.test)
+dunn.test(InsectSprays$count, InsectSprays$spray)
+```
+
+## Dunn's test with `dunn.test()`
+
+```{r}
+dunn.test(InsectSprays$count, InsectSprays$spray, method = "bonferroni")
+```
+
+
+
+# Plotting the results of multiple comparisons
+
+## Step 1:
+
+Stare at the test output, and decide what the letters are
+```{r}
+titanic.aov <- aov(fare ~ nationality, data = titanic)
+anova(titanic.aov)
+TukeyHSD(titanic.aov)
+```
+
+## Step 2:
+
+Stare at the ggplot output, and decide where the letters should go
+```{r}
+p <- ggplot(titanic, aes(x = nationality, y = fare))
+p + geom_boxplot()
+```
+
+## Step 2:
+
+Stare at the ggplot output, and decide where the letters should go
+```{r}
+p <- ggplot(titanic, aes(x = nationality, y = fare))
+p + geom_boxplot() + ylim(0,200)
+```
+
+## Step 3:
+
+Make a dataframe with your label information
+
+```{r}
+label_table <- data.frame(x.valuez = c(1,2,3),
+                          y.valuez = 175,
+                          letterz = c("a","b","b"))
+label_table
+```
+
+## Step 4:
+
+Put it all together!
+
+```{r}
+p <- ggplot(titanic, aes(x = nationality, y = fare))
+p + geom_boxplot() + ylim(0,200) + 
+  geom_text(data = label_table, 
+            aes(x = x.valuez,  y = y.valuez, label = letterz), 
+            color = "red", size = 6)
+```
+
+## Step 5:
+
+Have fun!!!
+
+```{r}
+p <- ggplot(titanic, aes(x = nationality, y = fare))
+p + geom_jitter() +
+  geom_text(data = label_table, 
+            aes(x = x.valuez,  y = y.valuez, label = letterz), 
+            color = "red", size = 6) 
+```
+
+## Step 5:
+
+Have fun!!!
+
+```{r}
+p <- ggplot(titanic, aes(x = nationality, y = fare))
+p + geom_jitter() +
+  geom_text(data = label_table, 
+            aes(x = x.valuez,  y = 400, label = letterz), 
+            color = "red", size = 9) 
+```
+
+## Step 5:
+
+Have fun!!!
+
+```{r}
+p <- ggplot(titanic, aes(x = nationality, y = fare))
+p + geom_violin(fill = "dodgerblue") + ylim(0,200) +
+  geom_text(data = label_table, 
+            aes(x = x.valuez,  y = y.valuez, label = letterz), 
+            color = "dodgerblue", size = 6) 
+```
+
+## Step 5:
+
+Have fun!!!
+
+```{r}
+p <- ggplot(titanic, aes(x = nationality, y = fare))
+p + geom_violin(fill = "dodgerblue") + ylim(0,200) +
+  geom_text(data = label_table, 
+            aes(x = x.valuez,  y = c(175, 163, 163), label = letterz), 
+            color = "dodgerblue", size = 6) 
+```
+
+## Step 5:
+
+Have fun!!!
+
+```{r}
+p <- ggplot(titanic, aes(x = nationality, y = fare))
+p + geom_violin(fill = "dodgerblue") +
+  geom_text(data = label_table, 
+            aes(x = x.valuez - 0.1,  y = y.valuez, label = letterz), 
+            color = "dodgerblue", size = 6) 
+```
+
+## Step 5:
+
+Have fun!!!
+
+```{r}
+p <- ggplot(titanic, aes(x = nationality, y = fare))
+p + geom_violin(fill = "dodgerblue") + ylim(0,200) +
+  geom_text(data = label_table, 
+            aes(x = x.valuez,  y = 20, label = letterz), 
+            color = "white", size = 6) 
+```

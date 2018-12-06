@@ -1,0 +1,311 @@
+---
+title: 'Week 11: Correlations'
+author: "Avalon C.S. Owens, Eric R. Scott"
+date: "11/16/2018"
+output:
+  pdf_document: default
+  ioslides_presentation:
+    df_print: paged
+    widescreen: yes
+---
+```{r include=FALSE}
+#required packages this week:
+library(tidyverse)
+```
+
+## Outline
+
+```{r message=FALSE, warning=FALSE, eval=FALSE}
+library(ggplot2)
+```
+
+- Calculating correlation coefficient (Pearson and Spearman)
+- Doing correlation test (Pearson and Spearman)
+- Bi-variate scatter plots
+- Anscombe's quartet
+- Using `stat_summary()` in `ggplot2`
+
+
+
+
+# Correlation Coefficients
+
+## Correlation Coefficients
+
+>- `cor()` takes two vectors and returns a correlation coefficient
+>- Default is Pearson
+>- Get Spearman correlation coefficient with `method = "spearman"`
+
+```{r}
+cor(trees$Girth, trees$Height)
+cor(trees$Girth, trees$Height, method = "spearman")
+```
+
+## Correlation Coefficients
+
+- Order of two vectors doesn't matter.
+
+```{r}
+cor(trees$Height, trees$Girth)
+```
+
+# Correlation Test
+
+## Correlation Test
+
+>- `cor.test()` takes two vectors and does a correlation test.
+>- "`alternative = `" controls tails (`"two.sided"` is default)
+
+```{r}
+cor.test(trees$Height, trees$Girth)
+```
+
+## Correlation Test
+
+>- `method = "spearman"` for Spearman correlation
+>- Safe to ignore message: "Cannot compute exact p-value with ties"
+
+```{r}
+cor.test(trees$Height, trees$Girth, method = "spearman")
+```
+
+# Bi-variate Scatter Plots
+
+## Scatterplots in ggplot2
+
+>- Both `x` and `y` `aes`thetics need to be continuous
+>- `geom_point()` plots points
+
+```{r fig.height=3, fig.width=4}
+ggplot(trees, aes(x = Height, y = Girth)) + geom_point()
+```
+
+## Scatterplots in ggplot2
+
+>- OK to use either variable for the x-axis for correlations.
+>- You can put `aes()` either inside of `ggplot()` or inside of a `geom`
+
+```{r fig.height=3, fig.width=4}
+ggplot(trees) + geom_point(aes(x = Girth, y = Height))
+```
+
+## Scatterplots in ggplot2
+
+- Use `size = ` outside of `aes()` to change the size of all points
+
+```{r fig.height=3, fig.width=4}
+ggplot(trees) + geom_point(aes(x = Girth, y = Height), size = 4)
+```
+
+## Scatterplots in ggplot2
+
+>- Put `size =` *inside* of `aes()` to map a variable to point size.
+>- You probably won't have a use for this in this class.
+
+```{r fig.height=3, fig.width=4}
+ggplot(trees) + geom_point(aes(x = Girth, y = Height, size = Volume))
+```
+
+# Customizing plots
+
+## Save previous plot
+
+```{r}
+p <- ggplot(trees) + geom_point(aes(x = Girth, y = Height, size = Volume))
+```
+
+## Finishing up your scatter plot
+
+- Add units to axis labels
+- (and to size legend)
+
+```{r fig.height=3, fig.width=4}
+p2 <- p +
+  labs(x = "Girth (in)", y = "Height (ft)") +
+  scale_size_continuous("Volume (ft^3)") 
+p2
+```
+
+## Finishing up your scatter plot
+
+- Try out a different `theme_*()`
+- Type theme_ and browse the dropdown menu to try some out.
+
+```{r fig.height=3, fig.width=4}
+p2 + theme_classic()
+```
+
+# Anscombe's quartet
+
+```{r echo=FALSE, fig.height=3, fig.width=10, message=FALSE, warning=FALSE}
+anscombe %>% 
+  add_column(ID = 1:11, .before = "x1") %>% 
+  gather(-ID, key = "key", value = "value") %>% 
+  separate(key, into = c("xy", "group"), sep = "(?<=\\w)") %>% 
+  spread(key = xy, value = value) %>% arrange(group, ID) %>% 
+  ggplot(aes(x = x, y = y)) + geom_point() + facet_wrap(~group, nrow = 1)
+```
+
+## Anscombe's Quartet
+
+>- Anscombe's Quartet is a group of 4 bi-variate datasets
+>- Similar mathematical properties despite very different shapes
+>- Data visualization is important!
+>- Available as `anscombe` in R
+>- Even more mathematically similar and visually different datasets in the `datasauRus` package!
+
+## Anscombe's Quartet
+
+For your assigned set of x and y variables:
+
+- Calculate the Pearson Spearman correlation coefficients
+- Do a correlation test (just get the p-value, not all 6 steps)
+- Make a bi-variate scatter plot
+- Compare with another student
+
+```{r rows.print=4}
+anscombe
+```
+
+## `datasauRus`
+
+```{r echo=FALSE, fig.height=5.5}
+library(datasauRus)
+datasaurus_dozen %>% 
+  group_by(dataset) %>%
+  mutate(dataset2 = paste(dataset, round(cor(x,y), 4))) %>% 
+ggplot(aes(x = x, y = y, color = dataset)) +
+  geom_point() +
+  facet_wrap(~dataset2) +
+  theme_minimal() + 
+  theme(legend.position = "none")
+```
+
+## What now?
+
+Work on homework?
+
+*OR*
+
+Go through a *way* quicker way to make bar plots and add significance letters?
+
+```{r echo=FALSE, fig.height=4}
+titanic <- read.csv("titanic.csv")
+ggplot(titanic, aes(x = nationality, y = fare)) +
+  stat_summary(geom = "bar", fun.y = mean) +
+  stat_summary(geom = "errorbar", fun.data = mean_se, width = 0.25) +
+  stat_summary(geom = "text", fun.y = mean, label = c("a", "b", "b"), size = 6,
+               position = position_nudge(y = 6)) +
+  annotate(geom = "text", x = 2, y = 40, label = "Only 4 lines of code!!!",
+           angle = 335, size = 12, color = "red")
+```
+
+
+# Making complex plots simple with `stat_summary()`
+
+## What's a `stat`?
+
+- "geoms" add mapping to geometric features (e.g points, lines, bars)
+- "stats" do some transformation.
+- E.g. `geom_boxplot()` uses `stat = "boxplot"` by default.  Takes dataframe and calculates quartiles, fences, outliers.
+- `geom_point()` uses `stat = "identity"` by default.  Simply passes x and y unchanged.
+
+## Adding a stat
+
+- Some geoms can take different stats, but usually not a good idea to change the default.
+- You *can* add a `stat_*()` instead of adding a `geom_*()`
+- E.g. instead of:
+
+```{r eval=FALSE}
+p + geom_boxplot(stat = "boxplot")
+```
+
+- You could do:
+
+```{r eval=FALSE}
+p + stat_boxplot(geom = "boxplot")
+```
+
+>- These are identical, no reason to *actually* do this.
+
+## stat_summary() is flexible!{.smaller}
+
+- Tell it how you want it to summarize your data frame and what geom you want it to use
+- Remember bar plots?  First we summarized the data using `group_by(...) %>% summarize(...)`, then we plotted the summary data frame.
+- With `stat_summary()` instead:
+
+```{r fig.height=3}
+ggplot(chickwts, aes(x = feed, y =  weight)) +
+  stat_summary(geom = "bar", fun.y = "mean") + # makes the bars
+  stat_summary(geom = "errorbar", fun.data = "mean_se", width = 0.25) # makes the errorbars
+```
+
+## stat_summary()
+
+```{r, eval=FALSE}
+ggplot(chickwts, aes(x = feed, y =  weight)) +
+  stat_summary(geom = "bar", fun.y = "mean") # use x = feed, but y = mean(weight)
+```
+
+- `geom = "bar"` tells it to use `geom_bar()`
+- `fun.y` is telling it how to get the y-values that `geom_bar()` needs.  Here, we used `mean()`
+- Try changing `fun.y` to something else like `min`, `max`, or `median`.
+
+## stat_summary()
+
+```{r, eval=FALSE}
+ggplot(chickwts, aes(x = feed, y =  weight)) +
+  stat_summary(geom = "bar", fun.y = "mean") +
+  stat_summary(geom = "errorbar", fun.data = "mean_se") 
+# use x = feed, but ymin = mean(weight) - SEM, ymax = mean(weight) + SEM
+```
+
+- `geom = "errorbar"` tells it to use `geom_errorbar()`
+- `mean_se` is a function from `ggplot2` that calculates ymin, and ymax aesthetics needed for errorbars.
+- `fun.data` because `mean_se` returns a dataframe, not just the y-values
+
+## Boxplots with letters using `stat_summary()`
+
+- We can use `stat_summary()` to add letters to boxplots without making a new data frame
+
+```{r}
+titanic <- read.csv("titanic.csv") %>% filter(fare < 400)
+p <- ggplot(titanic, aes(x = nationality, y = fare)) + geom_boxplot()
+```
+## Base boxplot
+
+```{r}
+p
+```
+
+
+## Adding letters with `stat_summary()`
+
+```{r}
+p + stat_summary(geom = "text", fun.y = "max", label = c("a", "b", "b"))
+```
+
+## Adjust letter position
+
+- Nudge the letters up with `position = position_nudge()`
+
+```{r}
+p + stat_summary(geom = "text", fun.y = "max", label = c("a", "b", "b"),
+                 position = position_nudge(y = 30)) #in units of y-axis
+```
+
+## Change the look of letters
+
+- additional arguments get passed to `geom_text()`
+
+```{r}
+p + stat_summary(geom = "text", fun.y = "max", label = c("a", "b", "b"),
+                 position = position_nudge(y = 30), #in units of y-axis
+                 size = 5, color = "darkred") 
+```
+
+## Using `stat_summary()` in practice
+
+- Making a summary table first, then plotting may be more *transparent*, easier for others to understand
+- *But*, `stat_summary()` can make code cleaner, easier to read
+- Complex plots with original data with multiple summary annotations (e.g. means, errorbars, significance letters) are made a **lot** simpler with `stat_summary()`

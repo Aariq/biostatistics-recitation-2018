@@ -1,0 +1,28 @@
+---
+title: "Spooky Halloween Code"
+output: html_notebook
+---
+
+Original code by [\@andrewheiss](https://twitter.com/andrewheiss/status/1057682358135021568)
+
+```{r}
+library(ggplot2)
+```
+
+```{r}
+squiggly <- function(x) sin(5 * x) / 200
+eyes <- data.frame(x = c(-1, 1), y = 0.06)
+mouth <- data.frame(x = 0, y = 0.04)
+```
+
+```{r}
+ggplot(mapping = aes(x = c(-10, 10))) +
+  geom_area(stat = "function", fun = squiggly, fill = "white") +
+  geom_area(stat = "function", fun = dnorm, fill = "white",
+            args = list(mean = 0, sd = 4)) +
+  geom_point(data = eyes, aes(x = x, y = y), size = 5) +
+  geom_point(dat = mouth, aes(x = x, y = y), size = 15) +
+  theme_dark() +
+  labs(title = "Paranormal distribution")
+```
+

@@ -1,0 +1,219 @@
+---
+title: "Week 2 Recitation Notes"
+output:
+  html_notebook: default
+  pdf_document: default
+  word_document: default
+---
+
+
+### 1. Notebook saving
+
+a) Create notebook and save somewhere.
+b) Move it and click "no"
+c) Show that it creates a new file, but keeps the old one open
+
+d) Move it and show that you need to click "yes"
+
+e) Show them on trunk that you can download the homework, and use that file. 
+
+### 2. Warmup (lecture slides)
+
+```{r}
+
+bee<-read.csv("BeeNectar.csv")
+nrow(bee)
+summary(bee$Nectar)
+mean(bee$Nectar)
+sd(bee$Nectar)
+var(bee$Nectar)
+
+sqrt(var(bee$Nectar))
+
+
+hist(bee$Nectar, breaks=8)
+hist(bee$Nectar, breaks=seq(min(bee$Nectar),max(bee$Nectar), length.out=8))
+
+```
+
+ - **Histogram binning**: Rules of Thumb (**always** use this guideline in this class!)
+
+Sample Size       Number of Bins    
+------------      --------------- 
+Less than 16      Not Enough Data
+16--31            5
+32--63            6
+64--127           7
+128--255          8
+
+
+### 3. Guided learning
+
+#### 3a.Introduce seq and sample
+
+```{r}
+
+num<-seq(1, 10, 1) # sequence of numbers, ranging from = to = and by =
+num<-seq(1, 10, length.out=5)
+
+seq(min(bee$Nectar),
+    max(bee$Nectar), 
+    length.out=8) # select for number of "breaks" or bins
+
+sample(num, 2)
+
+
+```
+
+
+#### 3b. Introduce repeating function
+
+Not equal numbers. Hat full of marbles, and you know the number of each. Randomly sample from the hat!
+
+
+```{r}
+
+y<-rep("yellow", 20)
+r<-rep("red", 5)
+b<-rep("blue", 100)
+
+color<-c(y, r, b)
+
+sample(color, 10)
+
+
+rep(5, 22)
+rep(c(5, 10), 11)
+rep(c(5, 10, 33), each = 3)
+
+rep(c("A", "B", "C"), 3)
+rep(c("A", "B", "C"), each = 3)
+rep(c("A", "B", "C"), length.out=11)
+
+
+```
+
+
+### 4. EXERCISE 1: sampling from Nectar column or rows in dataset. 
+
+```{r}
+
+ten<-sample(bee$Nectar, 10)
+fo<-sample(bee$Nectar, 40)
+
+mean(ten)
+mean(fo)
+mean(bee$Nectar)
+
+# Solution 1 for rows in dataset
+
+sim<-seq(1, 525, 1)
+sim<-seq(1, nrow(bee), 1)
+
+bee[sample(sim, 10),]
+
+# Solution 2 for rows in dataset
+
+bee[sample(1:525, 10), ]
+bee[sample(1:nrow(bee), 40), ] 
+nrow(bee) # tells you how many rows in your dataset
+
+
+
+```
+
+### 5. Introduce rnorm() that randomly generates numbers given some specified mean and standard deviation
+
+```{r}
+
+normaldata<-rnorm(300, mean=10, sd=2) # run this a few times, what do you notice?
+
+hist(normaldata) 
+
+
+# DO YOU THINK YOUR BEE DATA IS NORMALLY DISTRIBUTED??
+normbee<-rnorm(300, mean=mean(bee$Nectar), sd=sd(bee$Nectar)) # Enter in your mean and standard from the nectar weight
+
+hist(normbee) # Negative values
+hist(bee$Nectar) # No, positively skewed
+
+```
+
+
+### 6. EXERCISE 2. Create a boxplot of the nectar weight of bees from different colonies
+
+```{r}
+class(bee$Colony)
+
+bee$Colony<-as.factor(bee$Colony)
+class(bee$Colony)
+
+
+# A. Summary stats
+
+summary(bee$Pollen)
+summary(bee$ITS)
+
+sd(bee$Pollen)
+sd(bee$ITS, na.rm=T)
+
+# B. Boxplots
+
+with(bee, boxplot(Nectar ~ Colony))
+with(bee, boxplot(Pollen ~ Colony))
+with(bee, boxplot(ITS ~ Colony))
+
+# C. Advanced problem
+
+library(tidyverse)
+
+new.data<-bee %>% group_by(Colony) %>% summarise(mu.nec = round(mean(Nectar), 6),
+                                                 sd.nec = round(sd(Nectar), 6),
+                                                 mu.poll = round(mean(Pollen), 6),
+                                                 sd.poll = round(sd(Pollen), 6), 
+                                                 range.nec = round(max(Nectar) - min(Nectar), 6)) 
+
+
+```
+
+Common problems
+
+```{r}
+
+# 1. Subsetting data to create a new dataset
+
+sub1 <- subset(bee, Pollen == 0) # all values that are 0, you need double == 
+sub2 <- subset(bee, Pollen > 0) # all values greater than 
+sub3 <- subset(bee, Pollen >= 0.01) # equal to or greater than
+sub4 <- subset(bee, Pollen > 0.01 | Pollen < 0.0002) # keep values that are either (1) greater than 0.01 or less than 0.0002
+
+sub5 <- subset(bee, Colony == "32") # factors (e.g. categorical variables should have quotations)
+sub6 <- subset(bee, Colony =="32" & Pollen > 0)  # you can combine data
+
+# 2. Removing NA values
+
+sub7 <- subset(bee, !is.na(ITS)) # remove all rows in dataset where ITS has NA values. 
+
+mean(bee$ITS, na.rm=T) # or remove NAs just in function, so that you keep all these rows for analysing other vectors, e.g. Nectar and Pollen. 
+
+# 3. Classes of variables
+
+class(bee$Pollen) # tells you the class of variable that is listed within the Pollen column
+
+is.factor(bee$Pollen) # Pollen is not a factor
+is.numeric(bee$Pollen) # Pollen is listed as numeric -- good!
+
+is.factor(bee$Colony) # If "TRUE" then good, if "FALSE" then bad
+bee$Colony <- as.factor(bee$Colony) # To make colony ID column as a factor
+
+
+```
+
+Lecture speak                R speak
+-------------                -------------
+Numerical, continuous        numeric
+Numerical, discrete          integer 
+Categorical, nominal         factor (or character)
+Categorical, ordinal         factor (you may need to convert as an ordered factor using "ordered" function)
+
+It is better to leave all categorical vectors as factors for statistical tests, e.g. ANOVA.  

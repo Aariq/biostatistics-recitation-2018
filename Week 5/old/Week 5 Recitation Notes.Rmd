@@ -1,0 +1,100 @@
+---
+title: "Recitation Week 5"
+output: html_notebook
+---
+
+There's no recitation this week due to Indigenous People's day.  Here's some information and code that will be helpful for working on the Problem Sets.
+
+For this tutorial, we'll use the built-in data set `sleep`.  This data frame contains data from an experiment where the same patients were given two different sleep drugs at different times. The data contains the following columns:
+
+ - `extra`: numeric, the increase in hours of sleep
+ - `group`: factor, the drug given (drug 1 or drug 2, coded as just 1 and 2)
+ - `ID`: factor, patient ID
+
+
+```{r}
+sleep
+```
+
+#### IMPORTANT: Tidy Data Format
+
+Notice that these data are in a format where each column is a different variable and each row is a different observation or measurement.  This format is called "long data" or "tidy data".  For paired data studies, it might be convenient to record your data with one column for drug 1 and another column for drug 2, or separate columns for before and after some treatment where each row is a patient or test subject. However, in order to analyze and plot your data effectively, you should convert it to this tidy format by adding an ID column and a Treatment column and combining the measurements into one column.  The package `tidyr` has  functions designed to help you do this in R, particularly `gather()` and `spread()`.  For a more in-depth discussion of tidy data, see http://r4ds.had.co.nz/tidy-data.html
+
+### Paired t-tests
+
+For paired t-tests, you can use either a formula (e.g. `extra ~ group`) or supply two vectors.  The pairing is implicit in the order of the values. That is, you don't actually use the ID column for the t-test (it will be important later for plotting).
+
+```{r}
+t.test(extra ~ group, paired = TRUE, data = sleep) #be sure to include paired = TRUE to get a paired t-test
+
+##OR##
+
+with(sleep, 
+     t.test(extra[group == "1"], extra[group == "2"], paired = TRUE))
+```
+
+
+### Plotting paired data
+
+Use `interaction.plot()` to plot paired data (or any data with two factors and one continuous variable). Notice how it codes the different lines.
+```{r}
+#this is a great time to use with() so you don't have to keep typing "sleep$"
+with(sleep, 
+     interaction.plot(x.factor = group,   #The factor that appears on the x-axis
+                      trace.factor = ID,  #It will draw separate lines for each level of the trace.factor
+                      response = extra,   #The measured variable
+                      fixed = TRUE,       #This just makes the ID's appear in descentding order in the legend
+                      xlab = "Sleep Drug",
+                      ylab = "Extra Sleep (hours)"))
+```
+As you can see, there are repeats in the coding.  For example, patients 10 and 4 are indistinguishable on this plot.  This is because there are more patients than there are line types in R.  We can add symbols the the plot and since there are a different number of symbols that R can draw from the number of line types, the combinations of the two will be unique
+
+```{r}
+#this is a great time to use with() so you don't have to keep typing "sleep$"
+with(sleep, 
+     interaction.plot(x.factor = group,   #The factor that appears on the x-axis
+                      trace.factor = ID,  #It will draw separate lines for each level of the trace.factor
+                      response = extra,   #The measured variable
+                      fixed = TRUE,       #This just makes the ID's appear in descentding order in the legend
+                      type = "b",         #This makes it plot both lines and points
+                      pch = 1:10,         #This tells it which symbols to use, in this case 1 through 10
+                      xlab = "Sleep Drug",
+                      ylab = "Extra Sleep (hours)"))
+```
+Success! Now you can see that there are no repeat combinations of line types and symbols.  In fact, you could have *only* used symbols for this, but I think that it makes it easier to follow the lines if they are different line types.
+
+Another solution would be to use a combination of line types and colors, but that won't be helpful if you have a black and white printer.
+
+```{r}
+#this is a great time to use with() so you don't have to keep typing "sleep$"
+with(sleep, 
+     interaction.plot(x.factor = group,   #The factor that appears on the x-axis
+                      trace.factor = ID,  #It will draw separate lines for each level of the trace.factor
+                      response = extra,   #The measured variable
+                      fixed = TRUE,       #This just makes the ID's appear in descentding order in the legend
+                      lty = 1:3,          #Use 3 line types, which will be repeated automatically
+                      col = ID,           #Makes each ID a different color
+                      xlab = "Sleep Drug",
+                      ylab = "Extra Sleep (hours)"))
+```
+
+Success!  There are now no repeat combinations of line types and colors. 
+
+*NOTE*: You can also supply `col = ` with your own vector of 10 colors. The advantage of this is that you can avoid using colors like yellow that are really hard to see in print and on projector screens. The disadvantage is that it's hard to think of 10 colors that look different enough from each other but still look good together. You can see all the color names available in R by typing `colors()` (R also accepts hex values---don't worry about this if you don't know what it means!). For more advanced color palette stuff, check out the `RColorBrewer` and `viridis` packages.
+
+If you don't care about visualizing the different patient ID's you could make a simpler version by turning off the legend and making all the lines look the same.
+
+```{r}
+with(sleep, 
+     interaction.plot(x.factor = group,   #The factor that appears on the x-axis
+                      trace.factor = ID,  #It will draw separate lines for each level of the trace.factor
+                      response = extra,   #The measured variable
+                      fixed = TRUE,       #This just makes the ID's appear in descentding order in the legend
+                      type = "b",         #plot both lines and points
+                      lty = 1,            #use solid line for all IDs
+                      pch = 20,           #symbol 20 is a solid dot
+                      legend = FALSE,     #supresses legend
+                      xlab = "Sleep Drug",
+                      ylab = "Extra Sleep (hours)"))
+```
+

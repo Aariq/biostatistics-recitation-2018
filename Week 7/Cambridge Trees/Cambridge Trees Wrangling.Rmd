@@ -1,0 +1,99 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+library(readxl)
+library(here)
+```
+
+```{r}
+ctrees <- read_csv(here("Week 7", "Cambridge Trees", "Cambridge Trees.csv"))
+```
+```{r}
+ctrees.tidy <- ctrees %>%
+  select(trunks, CommonName, Genus, species, TreeCondit, Location, diameter, BareRoot, TreeID) %>% 
+  filter(!is.na(Genus)) %>% 
+  filter(trunks == 1) %>% 
+  # filter(Location == "Street Tree") %>% 
+  select(TreeID, Genus, species, CommonName, diameter, Location) %>% 
+  #remove genus abbrevs from species column
+  mutate(species = str_remove(species, "\\w\\.\\s?")) %>% 
+  mutate(species = ifelse(is.na(species), "sp.", str_to_lower(species))) %>% 
+  #remove species name from genus column
+  mutate(Genus = str_remove(Genus, " \\w+"))
+
+factor(ctrees.tidy$Location) %>% levels()
+```
+
+# Randomly sample some trees for a t-test question
+
+```{r}
+streetmaples <- ctrees.tidy %>% filter(Location == "Street Tree") %>% filter(Genus == "Quercus")
+parkmaples <- ctrees.tidy %>% filter(Location == "Park Tree") %>% filter(Genus == "Quercus")
+spookymaples <- ctrees.tidy %>% filter(Location == "Cemetery Tree") %>% filter(Genus == "Quercus")
+maples <- bind_rows(sample_n(parkmaples, 20), sample_n(spookymaples, 20))
+```
+
+```{r}
+t.test(diameter ~ Location, data = maples)
+```
+
+# Export maples data
+
+```{r}
+maples %>% select(-species) %>% write_csv(here("Week 7", "data", "maples.csv"))
+```
+
+
+# Ginkgos
+
+```{r}
+ginkgos <- ctrees.tidy %>% filter(Genus %in% c("Ginkgo", "Gingko")) %>% 
+  filter(Location %in% c("Park Tree", "Street Tree")) %>% 
+  group_by(Location) %>% 
+  sample_n(15)
+ 
+ggplot(ginkgos, aes(x = diameter)) + geom_histogram(bins = 5) + facet_wrap(~Location, scales = "free_x")
+```
+
+```{r}
+ctrees.tidy %>% 
+  group_by(Genus, species) %>% summarize(n()) %>% arrange(desc(`n()`))
+```
+
+```{r}
+ctrees.tidy %>% 
+  filter(Genus == "Gleditsia") %>% 
+  group_by(Location) %>% summarize(n()) %>% arrange(desc(`n()`))
+```
+
+```{r}
+# set.seed(4) # fixed by sqrt transform, but leaves an outlier
+# set.seed(10) #right skewed, fixed by log transform, stree trees pretty platykurtic
+set.seed(18)
+locusts <- ctrees.tidy %>% 
+  filter(Genus == "Gleditsia", Location %in% c("Street Tree", "Park Tree")) %>% 
+  filter(diameter > 0) %>% 
+  group_by(Location) #%>% 
+  #sample_n(30)
+ggplot(locusts, aes(x = (diameter))) + geom_histogram(bins = 8) + facet_wrap(~Location)
+ggplot(locusts, aes(sample = (diameter))) + geom_qq() + geom_qq_line() + coord_flip() + facet_wrap(~Location)
+```
+
+
+```{r}
+set.seed(5)
+redmaple <- ctrees.tidy %>% filter(Genus == "Acer", species == "rubrum") %>% 
+  filter(Location %in% c("Street Tree", "Park Tree")) %>% 
+  group_by(Location) %>% 
+  sample_n(30)
+
+ggplot(redmaple, aes(x = (diameter))) + geom_histogram(bins = 8) + facet_wrap(~Location)
+ggplot(redmaple, aes(sample = (diameter))) + geom_qq() + geom_qq_line() + facet_wrap(~Location)
+library(here)
+here()
+write_csv(redmaple, here("redmaples.csv"))
+```
+

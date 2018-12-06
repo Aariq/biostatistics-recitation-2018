@@ -1,0 +1,343 @@
+---
+title: "Sampling and Summarizing Data"
+author: "Eric R. Scott, Avalon Owens"
+output:
+  ioslides_presentation:
+  pdf_document: default
+---
+```{r}
+library(tidyverse)
+```
+
+## Overview
+- probability distributions (uniform, binomial)
+- plotting probability distributions (`geom_density()`, `geom_vline()` for adding marks for p > 0.05 and stuff)
+- standard error (write a function for this?)
+- confidence intervals (calculated using `dt()`---or is it `pt()`?.  Anyway, don't introduce `t.test()` yet)
+- `geom_bar()`(which does calculations for you), `geom_col()` (if you have means already calculated), `geom_errorbar(stat = mean_se)`.
+
+
+
+easy way to make errorbars:
+```{r}
+ggplot(mtcars, aes(cyl, qsec)) + 
+    stat_summary(fun.y = mean, geom = "bar") + 
+    stat_summary(fun.data = mean_se, geom = "errorbar")
+```
+
+more transparent way to make errorbars:
+```{r}
+# make a function to calculate standard error
+sem <- function(x){
+  sd(x)/sqrt(length(x))
+}
+
+plotdata <- mtcars %>% 
+  group_by(cyl) %>% 
+  summarize(meanq = mean(qsec),
+            errmin = meanq - sem(qsec),
+            errmax = meanq + sem(qsec))
+
+ggplot(plotdata, aes(x = cyl, y = meanq)) +
+  geom_col() +
+  geom_errorbar(aes(ymin = errmin, ymax = errmax))
+```
+
+
+## Warmup
+ - Take a random sample of 15  *integers* from a sequence of *integers* ranging from 1 to 1000.
+ - Take a random sample of 15 numbers from a normal distribution with a mean of 500 and a standard deviation of 10
+ - What are some of the differences between sampling numberse these two ways?
+
+### Discrete probability distributions
+Remember to plot these as barplots with space between the bars, not as histograms or as lines
+
+#### Uniform
+`dunif()` gives the probability of a single event, e.g. probability of rolling a 6 on a single die. This is pretty easy to do with math instead.
+```{r}
+#die
+dunif(5, min = 0, max = 6)
+#Naming arguments can be helpful, but you don't have to do it if you supply them in the same order as in the helpfile
+dunif(5, 0, 6)
+1/6
+```
+
+`punif()` gives the probability distribution function. E.g. P[X < 5] or P[X > 3]. 
+
+- Read the help file to figure out what `lower.tail` does.
+```{r}
+#proability of rolling 1 through 4
+punif(4, min = 0, max = 6, lower.tail = TRUE)
+
+#probability of rolling greater than 4
+punif(4, min = 0, max = 6, lower.tail = FALSE)
+```
+All of this is easy to do with math, but all probability distributions use similar functions.  That is, there's a `pbinom()`, a `pnorm()`, a `ppois()` (for poisson, which we won't cover), etc.
+
+#### Plotting a discrete probability distribution
+How does `barplot()` work?
+Look at help file. Notice that there are *MANY* arguments, but that all but one have defaults.  That means you don't need to worry about them!  Notice that rather than x and y it wants "height".  That means it isn't going to calculate anything for you the way `boxplot()` does!
+```{r}
+#make a vector of heights
+(probs <- dunif(1:6, min = 0, max = 6))  #parentheses make it show the result AND assign to object
+barplot(height = probs, 
+        names.arg = 1:6,         #add names.arg to get x-axis labels
+        ylim = c(0,1),           #xlim and ylim change the range of the axes.  
+        ylab = "Probability",
+        xlab = "number of pips on a die")
+```
+
+#### Binomial Distribution
+Number of times one of two mutually exclusive events occurs in n independent trials
+Take a look at the helpfile for `dbinom()`
+
+ - Which argument is #trials? (size)
+ - which argument is binomial p AKA p[success] ? (prob)
+
+10 coin tosses, P[X = 5 heads] 
+```{r}
+dbinom(x = 5, size = 10, prob = 0.5)
+
+```
+
+probability of germinating titan arum seeds
+```{r}
+p <- 0.30
+n <- 3
+x <- 0:3
+
+(probs <- dbinom(0:3, n, p))
+
+barplot(height = probs, names.arg = 0:3,
+        xlab = "# sucessful germinations",
+        ylab = "probability",
+        ylim = c(0,1))
+```
+
+Play with shape of binomial distribution
+```{r}
+p = 0.3
+n = 40
+
+x = 0:n
+probs <- dbinom(x, n, p)
+barplot(probs, names.arg = x, ylim = c(0,1),
+        ylab = "Probability",
+        xlab = "# successes")
+```
+
+**Advanced** barplots. Recreating a figure from lecture slides showing how binomial distributions change when parameters change.
+```{r}
+n = 20
+x = 0:n
+p1 <- dbinom(x, n, 0.1)
+p2 <- dbinom(x, n, 0.5)
+p3 <- dbinom(x, n, 0.9)
+
+#add = argument allows overplotting.  Not perfect because green bars cover red bars and blue covers green not side-by side.
+#gold star for anyone who figures out how to do this correctly!
+barplot(p1, col = "red", ylim = c(0, 0.3), names.arg = 0:n)
+barplot(p2, col = "green", add = TRUE, axes = FALSE)
+barplot(p3, col = "blue", add = TRUE, axes = FALSE)
+
+###ggplot2 way.  To run this, you might need to install ggplot2 using install.packages("ggplot2")
+
+
+df <- data.frame(probs = c(p1, p2, p3), #one column is all the calculated probabilities
+                 ps = rep(c("0.1", "0.5", "0.9"), each = 21), #one column is the probabilities of success
+                 xs = rep(0:20, 3)) #one column is just 0 - number of trials to be used as the x-axis
+
+library(ggplot2)
+ggplot(df) +
+  geom_col(aes(y = probs, x = xs, fill = ps), position = "dodge") +
+  #position = "dodge" makes the bars not overlap,
+  #fill = makes it color code by that variable
+  xlab("# of successes") +
+  ylab("Probability")
+```
+
+#### Exercise 1
+
+ - What's the probability of drawing an ace of spades from a deck of cards (with no Jokers)?
+ - What's the probability of drawing 5 aces (of any suit) in a row from a deck of cards (with replacement!)?
+ 
+```{r}
+#prob of 5 aces out of 5 draws (with replacement)
+
+n = 5
+p = 4/52
+x = 5
+dbinom(x, n, p)
+```
+
+### Continuous distributions
+probability is area under the curve
+
+#### Normal
+
+- what are the defaults for mean and sigma for `pnorm()`? which normal distribution is this?
+- Don't use `dnorm()`!
+```{r}
+#P[X = x] is always 0
+dnorm(1)
+#doesn't work like expected!  Don't use dnorm!
+```
+- what % of curve is between -2 and 2 standard deviations?
+```{r}
+pnorm(2) #only lower tail, not between. Draw on board
+pnorm(2) - pnorm(-2) #subtract the lower bit
+```
+
+#### Plotting continuous distributions
+You could use points to approximate the shape
+```{r}
+xvals <- seq(-5, 5, 0.2) #just a sequence of x values to get probabilities for
+plot(x = xvals, y = dnorm(xvals),
+     ylab = "Probability Density",
+     xlab = "Z",
+     type = "l") #line plot instead of points
+```
+
+Another way is to use `curve()` which takes a function as the first argument
+```{r}
+curve(dnorm(x), from = -5, to = 5,
+      ylab = "Probability Density",
+      xlab = "Z")
+#could also use add = TRUE to overlay ontop of scatter plot
+```
+**Advanced** plotting: adding vertical lines and colors and arrows and text to a plot
+```{r}
+curve(dnorm(x), from = -5, to = 5,
+      ylab = "Probability Density",
+      xlab = "Z",
+      col = "blue")
+abline(v = -2, col = "red")
+abline(v = 2, col = "red")
+text(x = 0, y = 0.05, labels = "95%")
+arrows(x0 = c(-0.5, 0.5), y0 = c(0.05, 0.05), x1 = c(-2, 2), y1 = c(0.05, 0.05))
+```
+
+### Confidence intervals and SEM
+
+#### SEM
+ - sd describes spread in data in same units as mean
+ - SEM is a new summary statistic that describes the precision of your estimate of the mean
+
+$$SEM = \frac{s}{\sqrt{n}}$$
+
+We're going to use a built-in data set calld `ToothGrowth`.  There are many built-in datasets which you can view with the command `library(help = "datasets")`
+```{r}
+ToothGrowth
+str(ToothGrowth)
+```
+
+
+There is no built-in SEM function in R.  You can calculate it though, or you can **write your own function!**
+```{r}
+(mu <- mean(ToothGrowth$len))
+(s <- sd(ToothGrowth$len))
+(n <- length(ToothGrowth$len))
+(sem <- s / sqrt(n)) 
+
+SEM <- function(x){
+  sd(x)/sqrt(length(x))
+}
+```
+
+#### Confidence intervals
+Confidence intervals give an upper and lower confidence limit at some level of $\alpha$, usually 95%.  A 95% confidence interval means if you were to sample from a population repeatedly, 95% of your sample means would fall into those limits. R calculates this using the `t.test()` function
+
+*approximate*
+```{r}
+conf.lower<-mu + 1.96*SEM(ToothGrowth$len)
+conf.upper<-mu - 1.96*SEM(ToothGrowth$len)
+```
+
+*exact*
+```{r}
+t.95 <- t.test(ToothGrowth$len)
+
+#objects created by t.test have a bunch of things in them.  You can see what's there with names()
+names(t.95)
+#or with autocomplete after typing t.95$
+
+as.numeric(round(t.95$conf.int, 1))
+
+upper <- t.95$conf.int[1]
+lower <- t.95$conf.int[2]
+```
+#### Exercise 2
+
+ - get means and SEMs for len of each dose using `subset()` or `group_by()` and `summarise()` from the `tidyverse` (more advanced)
+
+```{r}
+#probably not a good idea to overwrite built-in data, but I'm doing it here for simplicity
+ToothGrowth$dose <- as.factor(ToothGrowth$dose)
+
+low <- subset(ToothGrowth, dose == 0.5)
+mid <- subset(ToothGrowth, dose == 1)
+high <- subset(ToothGrowth, dose == 2)
+
+means <- c(mean(low$len), mean(mid$len), mean(high$len))
+SEM <- function(x){
+  sd(x)/sqrt(length(x))
+}
+SEMs <- c(SEM(low$len), SEM(mid$len), SEM(high$len))
+means
+SEMs
+```
+
+
+**Tidyverse way**
+See more about how this works using the dplyr cheatsheet in the help menu > cheatsheets > Data Manipulation with dplyr, tidyr
+```{r}
+library(tidyverse)
+Tooth.Summary <- ToothGrowth %>% 
+  group_by(dose) %>% 
+  summarise(mean.len = mean(len), SEM.len = sd(len)/sqrt(length(len)))
+Tooth.Summary
+```
+
+#### Plotting error bars
+Barplots generally represent means as the heights of the bars so we need to summarise data before making a bar plot.
+```{r}
+barplot(means, names.arg = levels(ToothGrowth$dose),
+        ylab = "odontoblast length (nm)",
+        xlab = "vitamin C dose (mg/day)")
+
+###OR###
+# barplot(Tooth.Summary$mean.len, names.arg = Tooth.Summary$dose,
+#         ylab = "odontoblast length (nm)",
+#         xlab = "vitamin C dose (mg/day)")
+```
+#### Adding error bars
+`barplot()` has a weird feature that when you assign it to an object, the object contains values for the centerpoints of the bars, which is useful for plotting
+
+```{r}
+barCenters <- barplot(means, names.arg = levels(ToothGrowth$dose),
+        ylab = "odontoblast length (nm)",
+        xlab = "vitamin C dose (mg/day)",
+        ylim = c(0, max(means) + max(SEMs)))
+barCenters
+arrows(barCenters, means - SEMs, barCenters, means + SEMs, angle = 90, code = 3)
+
+```
+
+#### Exercise 3
+ - make a bar plot like this but with error bars representing 95% confidence intervals instead of SEMs
+
+```{r}
+low.ci <- as.numeric(t.test(low$len)$conf.int)
+mid.ci <- as.numeric(t.test(mid$len)$conf.int)
+high.ci <- as.numeric(t.test(high$len)$conf.int)
+
+CIs <- as.data.frame(rbind(low.ci, mid.ci, high.ci))
+
+barCenters <- barplot(means, names.arg = levels(ToothGrowth$dose),
+        ylab = "odontoblast length (nm)",
+        xlab = "vitamin C dose (mg/day)",
+        ylim = c(0, max(CIs)))
+barCenters
+arrows(barCenters, CIs$V1, barCenters, CIs$V2, angle = 90, code = 3)
+```
+

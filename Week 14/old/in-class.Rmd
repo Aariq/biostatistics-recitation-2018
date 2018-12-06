@@ -1,0 +1,169 @@
+---
+title: "Wee 14 In Class"
+output: html_notebook
+---
+```{r}
+library(knitr)
+```
+
+
+# Goodness of Fit
+
+```{r, out.width="50%"}
+include_graphics("https://upload.wikimedia.org/wikipedia/commons/0/03/Figure_12_03_02.png")
+```
+```{r simple chi square}
+#Actual
+Obs <- c(yellowround = 93, yelowwrinkled = 28, greenround = 31, greenwrinkled = 8)
+Obs
+sum(Obs)
+
+
+#Expected probabilities
+Exp.p <- c(9/16, 3/16, 3/16, 1/16)
+
+
+
+chisq.test(Obs, p = Exp.p) #must use named argument: p = 
+
+chisq.test(Obs, p = c(90,30,30,10), rescale.p = TRUE)
+chisq.test(Obs, p = c(9, 3, 3, 1), rescale.p = TRUE)
+```
+
+```{r}
+?binom.test
+binom.test(c(682, 243), #successes and failures
+           p = 3/4) #probability of sucess
+```
+
+
+
+
+```{r}
+Obs
+Exp.p
+
+Obs.sum = sum(Obs)
+Obs.sum
+Exp = Obs.sum * Exp.p
+Exp
+
+G = sum(Obs*log(Obs/Exp)) * 2
+
+G
+
+pchisq(G, length(Obs) - 2, lower.tail = FALSE)
+
+
+mygtest <- function(Obs, Exp.p) {
+  Obs.sum = sum(Obs)
+  Exp = Obs.sum * Exp.p
+  G = sum(Obs*log(Obs/Exp)) * 2
+  p = pchisq(G, length(Obs) - 2, lower.tail = FALSE)
+  list(G, p)
+}
+
+mygtest(c(103, 22, 5, 77), Exp.p = Exp.p)
+```
+
+
+# Contingency Analysis
+Context 1: assign treatment, measure 1 categorical variable
+Context 2: measure 2 categorical variables
+
+
+```{r}
+angina <- read.csv("Angina.csv")
+angina
+```
+
+
+```{r}
+angina.table <- xtabs(Freq ~ Treatment + Symptoms, data = angina)
+angina.table
+
+addmargins(angina.table)
+```
+
+```{r}
+worm <- read.csv("WormGetsBird.csv")
+worm
+```
+
+
+```{r}
+worm.table <- table(worm$bird_predation, worm$infection)
+addmargins(worm.table)
+
+#table(worm$infection, worm$bird_predation)
+```
+```{r}
+library(tibble)
+snails <- tribble(~predation, ~color,     ~freq,
+                  "Broken",   "Banded",   182,
+                  "Broken",   "Unbanded", 116,
+                  "Intact",   "Banded",   403,
+                  "Intact",   "Unbanded", 385)
+snails.table <- xtabs(freq ~ predation + color, data = snails)
+snails.table
+
+t(snails.table)
+```
+
+```{r}
+angina.table
+barplot(t(angina.table), legend.text = TRUE,
+        xlab = "Treatment",
+        ylab = "Number of Patients")
+```
+```{r}
+library(ggplot2)
+ggplot(angina) +
+  geom_col(aes(x = Treatment, y = Freq, fill = Symptoms))
+```
+
+
+```{r}
+worm.table
+mosaicplot(worm.table,
+           dir = c("h", "v"),
+           color = c("firebrick", "goldenrod2", "lightgoldenrodyellow"),
+           xlab = "Infection Status",
+           ylab = "Bird Predation",
+           main = NULL)
+
+colors()
+```
+```{r}
+worm.table
+summary(worm.table) #doesn't use Yates correction
+chisq.test(worm.table, correct = TRUE) #Yates correction for continuity (TRUE is default)
+```
+
+```{r}
+source("http://www.stat.wisc.edu/~st571-1/gtest.R")
+g.test(worm.table)
+```
+reject null hypothesis
+```{r}
+View(g.test)
+```
+
+
+```{r}
+vampire <- read.csv("VampireBites.csv")
+vampire.table <- table(vampire$bitten, vampire$estrous)
+vampire.table
+addmargins(vampire.table)
+
+
+
+fisher.test(vampire.table)
+```
+
+
+
+
+
+
+

@@ -1,0 +1,306 @@
+---
+title: "ABD Chapter 2 Plots re-done"
+output:
+  word_document: default
+  html_notebook: default
+---
+
+```{r}
+library(abd)
+library(tidyverse)
+```
+```{r}
+abdData()
+#Locust data seems to be missing from abd package
+
+locustData <- read_csv(url("http://whitlockschluter.zoology.ubc.ca/wp-content/data/chapter02/chap02f1_2locustSerotonin.csv"))
+locustData
+```
+
+# Figure 2.1-2: Stripchart (aka Jitter Plot)
+```{r}
+ggplot(locustData, aes(x = treatmentTime, y = serotoninLevel)) +
+  geom_jitter(width = 0.1)
+```
+Fancier version
+```{r}
+#find mean of each group
+locustmeans <- locustData %>% 
+  group_by(treatmentTime) %>% 
+  summarise(mean = mean(serotoninLevel))
+
+ggplot(locustData, aes(x = treatmentTime, y = serotoninLevel)) +
+  geom_jitter(width = 0.1, color = "red") +
+  labs(x = "Treatment time (hours)",
+       y = "Seratonin (pmoles)") +
+  geom_point(aes(x = treatmentTime, y = mean), data = locustmeans, size = 3, shape = 15) +
+  theme_bw()
+```
+
+# Figure 2.1-3
+```{r}
+educationSpending <- read_csv(url("http://whitlockschluter.zoology.ubc.ca/wp-content/data/chapter02/chap02f1_3EducationSpending.csv"))
+educationSpending
+```
+```{r}
+ggplot(educationSpending, aes(x = year, y = spendingPerStudent)) +
+  geom_col()
+```
+
+fancier version:
+```{r}
+ggplot(educationSpending, aes(x = year, y = spendingPerStudent)) +
+  geom_col(fill = "firebrick") +
+  ylim(0, 8000) +
+  labs(x = "Year", y = "Education spending ($ per student)") +
+  theme_bw()
+```
+
+# Example 2.2A
+```{r}
+tigerData <- read_csv(url("http://whitlockschluter.zoology.ubc.ca/wp-content/data/chapter02/chap02e2aDeathsFromTigers.csv"))
+tigerData
+```
+## Frequency table
+```{r}
+tigertable <- tigerData %>% 
+  group_by(activity) %>% 
+  summarise(count = n()) %>% 
+  arrange(desc(count))
+
+tigertable 
+```
+
+## Barplot
+using original data and geom_bar()
+```{r}
+ggplot(tigerData, aes(x = fct_infreq(activity))) +
+  geom_bar()
+```
+
+Using summary table and geom_col
+```{r}
+ggplot(tigertable, aes(x = fct_reorder(activity, count, .desc = TRUE), y = count)) +
+  geom_col()
+```
+
+Fancier version
+```{r}
+ggplot(tigertable, aes(x = fct_reorder(activity, count, .desc = TRUE), y = count)) +
+  geom_col(fill = "firebrick") +
+  labs(x = "Activity",
+       y = "Frequency (number of people)") +
+  theme_bw() +
+  theme(axis.text.x.bottom = element_text(angle = 90))
+```
+
+# Example 2.2B
+```{r}
+birdAbundanceData <- read_csv(url("http://whitlockschluter.zoology.ubc.ca/wp-content/data/chapter02/chap02e2bDesertBirdAbundance.csv"))
+birdAbundanceData
+```
+
+## Frequency table
+I don't know how useful this really is, and it is not "tidy". Skip for now
+
+## Histogram
+```{r}
+ggplot(birdAbundanceData, aes(x = abundance)) +
+  geom_histogram()
+
+#pick a better bin size or number of bins
+ggplot(birdAbundanceData, aes(x = abundance)) +
+  geom_histogram(binwidth = 50)
+```
+
+Fancier version:
+```{r}
+ggplot(birdAbundanceData, aes(x = abundance)) +
+  geom_histogram(binwidth = 50, fill = "firebrick") +
+  labs(x = "Abundance (No. Individuals)",
+       y = "Frequency (No. Species)") +
+  theme_bw()
+```
+
+# Figure 2.2-5.
+```{r}
+salmonSizeData <- read_csv(url("http://whitlockschluter.zoology.ubc.ca/wp-content/data/chapter02/chap02f2_5SalmonBodySize.csv"))
+salmonSizeData
+```
+
+## Histograms with different numbers of bins
+```{r}
+p <- ggplot(salmonSizeData, aes(x = massKg))
+
+p + geom_histogram()
+p + geom_histogram(bins = 12)
+p + geom_histogram(bins = 8)
+```
+
+
+## Bi-variate scatter plot
+```{r}
+ggplot(salmonSizeData, aes(x = lengthMm, y = massKg)) +
+  geom_point(aes(color = as.factor(oceanAgeYears))) +
+  scale_color_manual("Age", values = c("purple", "darkgreen")) +
+  geom_smooth(method = "lm", se = FALSE, color = "black")
+
+# colors()
+```
+
+
+# Example 2.3A.
+```{r}
+birdMalariaData <- read_csv(url("http://whitlockschluter.zoology.ubc.ca/wp-content/data/chapter02/chap02e3aBirdMalaria.csv"))
+birdMalariaData
+```
+
+# Contingency table
+These are inherently non-tidy.  I'm thinking we should wait to introduce until the very end when we tackle categorical data
+
+# Grouped barplot
+```{r}
+ggplot(birdMalariaData, aes (x = treatment, fill = response)) +
+  geom_bar()
+```
+
+## Mosaic Plot
+```{r}
+# #need to start with summary plot??
+# birdMalariaData %>% 
+#   group_by(treatment, response) %>% 
+#     summarise(comb_cnt  = n()) %>%
+#     mutate(height  = comb_cnt /sum(comb_cnt)) %>%
+#     ungroup()......
+# 
+# tibble(treatment = c("Control", "Control", "Remove", "Remove"),
+#        response = c("Yes", "No", "Yes", "No"),
+#        height = c()).......
+# 
+# 
+# birdtable$response
+# ggplot(birdtable, aes(x = fct_inorder(response), y = freq, fill = treatment)) +
+#    geom_bar(stat = "identity", position = "fill").......
+```
+ggmosaic appears to be broken.  Re-visit later
+```{r}
+library(ggmosaic)
+
+#need to start with summary plot
+birdtable <- birdMalariaData %>% 
+  group_by(treatment, response) %>% 
+  summarise(freq = n())
+
+# ggplot(birdtable, aes(weight = freq, x = treatment, fill = response)) +
+#   geom_mosaic()
+```
+# Example 2.3B.
+```{r}
+guppyFatherSonData <- read_csv(url("http://whitlockschluter.zoology.ubc.ca/wp-content/data/chapter02/chap02e3bGuppyFatherSonAttractiveness.csv"))
+guppyFatherSonData
+```
+
+## Bi-variate scatter plot
+```{r}
+ggplot(guppyFatherSonData, aes(x = fatherOrnamentation, y = sonAttractiveness)) +
+  geom_point()
+```
+
+fancier version:
+
+```{r}
+ggplot(guppyFatherSonData, aes(x = fatherOrnamentation, y = sonAttractiveness)) +
+  geom_point(color = "firebrick", size = 3) +
+  labs(x = "Father's ornamentation", y = "Son's attractiveness")
+```
+
+
+# Example 2.3C.
+```{r}
+#actualy exists in `abd` but not the same as what's on the web
+# Hemoglobin
+hemoglobinData <- read_csv(url("http://whitlockschluter.zoology.ubc.ca/wp-content/data/chapter02/chap02e3cHumanHemoglobinElevation.csv"))
+hemoglobinData
+```
+## Summarise by population
+```{r}
+hemoglobinData %>%
+  group_by(population) %>%
+  summarise(count = n(),
+            mean_hemoglobin = mean(hemoglobin))
+```
+
+## Stripchart/jitter plot
+```{r}
+ggplot(hemoglobinData, aes(x = population, y = hemoglobin)) +
+  geom_jitter(width = 0.25)
+```
+
+Fancier version
+```{r}
+p <- ggplot(hemoglobinData, aes(x = population, y = hemoglobin)) +
+    labs(x = "Male population",
+       y = "Hemoglobin concentration (g/dL)")
+#notice there is no geom_*.  We can add it to "p" later
+  
+p + geom_jitter(width = 0.25,
+                alpha = 0.2,         #alpha adjusts transparency
+                color = "firebrick",
+                size = 3) +
+  theme_bw()
+
+```
+
+## Boxplot
+Using the same data
+```{r}
+p + geom_boxplot()
+```
+
+## Violin plot
+Best of both worlds?
+
+```{r}
+p + geom_violin(draw_quantiles = c(0.25, 0.5, 0.75), scale = "area", trim = FALSE)
+```
+
+## Faceted histograms
+```{r}
+ggplot(hemoglobinData, aes(x = hemoglobin)) +
+  geom_histogram(bins = 20, fill = "firebrick") +
+  facet_wrap("population", ncol = 1, scales = "free_y") +
+  labs(x = "Hemoglobin concentration (g/dL)")
+```
+
+## ridge plot (density plot)
+```{r}
+library(ggridges)
+ggplot(hemoglobinData, aes(x = hemoglobin, y = population, fill = population)) +
+  geom_density_ridges()
+```
+
+
+
+# Example 2.4A.
+
+```{r}
+measlesData <- read_csv(url("http://whitlockschluter.zoology.ubc.ca/wp-content/data/chapter02/chap02e4aMeaslesOutbreaks.csv"))
+measlesData
+```
+
+## Line graph
+
+```{r}
+ggplot(measlesData, aes(x = yearByQuarter, y = confirmedCases)) +
+  geom_line()
+```
+
+fancier version:
+```{r}
+ggplot(measlesData, aes(x = yearByQuarter, y = confirmedCases)) +
+  geom_line() +
+  geom_point(color = "blue") +
+  labs(x = "Year", y = "Number of Cases", title = "Confirmed Measles Cases From 1995-2011") +
+  theme_bw()
+```
+

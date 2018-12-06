@@ -1,0 +1,28 @@
+---
+title: "Knitting error 3"
+subttie: "Can't open connection"
+output:
+  word_document: default
+---
+
+If you have a typo in the file name, or the file isn't in the same folder as the .Rmd file, you'll get a "cannot open the connection" error.
+
+```{r}
+ctrees <- read.csv("Camridge Trees.csv")
+```
+
+Whoops! There was a typo in the file name!  Try again:
+
+```{r}
+ctrees <- read.csv("Cambridge Trees.csv")
+```
+Whoops!  The file is actually in a folder called "data", not in the same folder as this .Rmd file.
+
+```{r}
+ctrees <- read.csv("data/Cambridge Trees.csv")
+```
+
+```{r}
+head(ctrees)
+```
+

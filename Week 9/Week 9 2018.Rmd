@@ -1,0 +1,378 @@
+---
+title: "ANOVA in R"
+author: "Avalon C.S. Owens, Eric R. Scott"
+date: "11/02/2018"
+output: 
+  ioslides_presentation:
+    widescreen: yes
+    df_print: paged
+---
+## Overview
+
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+library(ggplot2)
+library(car) # for leveneTest()
+```
+
+- Conducting an ANOVA in R
+    + Setting up ANOVA models
+    + Getting residuals from ANOVA models
+    + Testing assumptions of ANOVA on those residuals
+- Kruskal-Wallis test
+
+
+# ANOVA example
+
+## `chickwts`
+
+...Sorry if you're sick of this dataset!
+
+```{r}
+str(chickwts)
+```
+
+Only two columns: one for weight, one describing the type of feed
+
+Variable name = `feed`, 6 *levels* to that variable
+
+## Faceted histogram
+
+Let's start by making a faceted histogram to check normality
+
+Later I will show you a **better** way to check for normality.
+
+```{r fig.height=3.5}
+ggplot(chickwts, aes(x = weight)) + geom_histogram(bins = 8) + facet_wrap("feed")
+```
+
+## Doing an ANOVA in R
+
+> 1. Make the ANOVA model with `aov()`. This sets up the model, calculates sums of squares, but doesn't do the statistical test
+> 2. Get residuals with `fortify()` from the `ggplot2` package and check normality of **residuals**.
+> 3. If your model passes the check (#2), run `anova()` on your model (this calculates the statistics)
+
+
+# ANOVA step 1: set up the model
+
+## Make an ANOVA model with `aov()`
+
+This calculates sums of squares, but doesn't calculate F or p-value yet
+
+```{r}
+chick.aov <- aov(weight ~ feed, data = chickwts)
+chick.aov #don't need to do this, just for demo purposes!
+```
+
+## The `aov` model object
+
+If you type `chick.aov$`, you'll get a dropdown menu that shows what it contains (you can also use `str(chick.aov)`)
+
+We're going to use the residuals!
+
+```{r}
+str(chick.aov)
+```
+
+## Doing an ANOVA in R
+
+1. Make the ANOVA model with `aov()`
+2. **Check assumptions on residuals from this model**
+3. If your model passes the check (#2), run `anova()` on your model
+
+# ANOVA step 2a: extract the residuals
+
+## What are residuals?
+
+<img src="residuals.png" alt="Drawing" style="height: 520px;"/> 
+
+
+## What are residuals?
+
+Residuals are individual values minus group means
+
+$$
+Y_{ij} - \bar{Y}_{i}
+$$
+
+## What are residuals?
+
+We *could* calculate residuals manually with `mutate()`
+
+```{r rows.print=6}
+chickwts %>%
+  group_by(feed) %>%
+  mutate(group_mean = mean(weight), 
+         residuals = weight - group_mean)
+```
+
+## Get residuals with fortify() {.smaller}
+
+You can get residuals into a data frame format with `fortify()`
+
+`fortify(<<some model>>)` returns a data frame with your original data and some extra columns extracted from the model:
+
+- `.fitted` = "fitted" values (*i.e.* group means)
+- `.resid` = residual values
+- Don't worry about the rest!
+
+```{r rows.print=9}
+fortify(chick.aov)
+```
+
+# ANOVA step 2b: check normality of residuals
+
+## Histogram of residuals
+
+No need to separate by `feed`!
+
+```{r fig.height=3.5}
+ggplot(fortify(chick.aov), aes(x = .resid)) + geom_histogram(bins = 8)
+```
+
+## Normal probability plot of residuals
+
+No need to separate by `feed`!
+
+```{r fig.height=3.5}
+ggplot(fortify(chick.aov), aes(sample = .resid)) + 
+  geom_qq() + geom_qq_line() + coord_flip()
+```
+
+## Shapiro test on residuals
+
+No need to separate by `feed`!
+
+`shapiro.test()` still needs a *vector* rather than a data frame
+
+```{r, eval=FALSE}
+shapiro.test(chick.aov$residuals)
+#OR
+shapiro.test(fortify(chick.aov)$.resid)
+```
+```{r echo=FALSE}
+shapiro.test(chick.aov$residuals)
+```
+
+## Doing an ANOVA in R
+
+1. Make the ANOVA model with `aov()`
+2. Check assumptions on **residuals** from this model
+3. **If your model passes the check (#2), run `anova()` on your model**
+
+# ANOVA step 3: run the test!
+
+## Use `anova()` to run the test.
+
+*Now* we get to see our p-value!
+
+```{r eval=FALSE}
+anova(chick.aov)
+```
+```{r echo=FALSE}
+anova(chick.aov) %>% print()
+```
+
+## What if data aren't normal?
+
+- `InsectSprays` is data on the effectiveness of insecticides
+    + Researchers applied insecticides A through F 
+    + Then they counted insects in the fields
+- Unlikely to be normal since it is **count** data
+
+```{r rows.print=5}
+InsectSprays
+```
+
+
+## Summarize
+
+One thing we can do is calculate some summary statistics to get an idea if it meets assumptions of ANOVA
+
+```{r}
+insectsummary <- InsectSprays %>% 
+  group_by(spray) %>% summarize(n = n(), var = var(count))
+insectsummary
+```
+
+Sample size is not exactly *huge*, and variances differ by > 10×
+
+# Coding Hack: `kable()`
+
+## Making pretty tables
+
+- Data frames look pretty and interactive in your .Rmd file, but print out like boring R output in Word
+- Format them as actual tables with `kable()` from `knitr`!
+- You already have `knitr` installed, but you have to load it or specify with `::`
+```{r eval=FALSE}
+insectsummary %>% knitr::kable() %>% print()
+```
+```{r echo=FALSE}
+insectsummary %>% knitr::kable() %>% print()
+```
+
+
+## Check for homogeneity of variances
+
+Let's formally test our suspicions about variance
+```{r eval=FALSE}
+leveneTest(count ~ spray, data = InsectSprays)
+```
+```{r echo=FALSE}
+leveneTest(count ~ spray, data = InsectSprays) %>% print()
+```
+
+
+## Set up the model
+
+Let's set up the model with `aov()` and `fortify()` it so we can use **residuals** to check the normality
+
+```{r}
+insect.m <- aov(count  ~ spray, data = InsectSprays)
+insect.fort <- fortify(insect.m)
+head(insect.fort) #don't need to inspect fortified data for homeworks.  Just for demonstration!
+```
+
+## Check assumption of normality
+
+We can do this a few ways:
+
+- With a histogram
+- With a normal probability plot
+- With `shapiro.test()`
+
+## With a histogram
+
+What do you think?
+
+```{r fig.height=4}
+ggplot(insect.fort, aes(x = .resid)) + geom_histogram(bins = 8)
+```
+
+## With a normal probability plot
+
+What do you think? (Feel free to refer to your handout)
+
+```{r fig.height=3.5}
+ggplot(insect.fort, aes(sample = .resid)) + 
+  geom_qq() + geom_qq_line() + coord_flip()
+```
+
+## With `shapiro.test()`
+
+What do you think?
+
+```{r}
+shapiro.test(insect.m$residuals)
+```
+
+
+## Do the data meet our assumptions?
+
+- Histogram: a little leptokurtic
+- Normal probability plot: even more leptokurtic
+- Shapiro-Wilk test: $p > 0.01$, so not terrible
+- Levene's test: doesn't pass, unequal variance
+- Sample size: 12 each (not great)
+
+# Transform!
+
+```{r echo=FALSE}
+knitr::include_graphics("https://media.giphy.com/media/7c0bE2bfJrfos/giphy.gif")
+```
+
+
+## Transform!
+
+Count data are often "fixed" by a log transformation
+
+But I should check to see if there are zeroes in the data first!
+
+```{r}
+InsectSprays %>% filter(count == 0)
+```
+
+There are, so I'll try `log(count + 1)`
+
+## Transform!
+
+```{r}
+insects <- InsectSprays %>% mutate(log_count = log(count + 1))
+head(insects, 4)
+```
+
+NOTE: You *could* overwrite `InsectSprays`, but it's generally a pretty bad idea to overwrite built-in datasets  
+ 
+If you do, it's not permanent, but you will have to run `data(InsectSprays)` to get the original back!
+ 
+## Re-check the transformed data
+
+I'll start with the normal probability plot, skip the histogram, and then double check with `shapiro.test()`
+
+- First, re-fit the `aov()` model and extract residuals again
+
+```{r}
+insects.m2 <- aov(log_count ~ spray, data = insects)
+insects.fort2 <- fortify(insects.m2)
+```
+
+## Re-check with a normal probability
+
+Wow! Looks like we got lucky!
+
+```{r fig.height=3.5}
+ggplot(insects.fort2, aes(sample = .resid)) + 
+  geom_qq() + geom_qq_line() + coord_flip()
+```
+
+## Re-check with `shapiro.test()`
+
+Nice!
+
+```{r}
+shapiro.test(insects.fort2$.resid)
+```
+
+## What about the variances?
+
+Transforming data not only affects normality, but can also mess with homogeneity of variances
+
+Let's check to see if our variance problem is fixed...
+
+```{r eval=FALSE}
+leveneTest(log_count ~ spray, data = insects)
+```
+```{r echo=FALSE}
+leveneTest(log_count ~ spray, data = insects) %>% print()
+```
+
+Excellent!
+
+## ANOVA
+
+Do an ANOVA on the log transformed data that we used to set up `insects.m2`
+
+```{r eval=FALSE}
+anova(insects.m2)
+```
+```{r echo=FALSE}
+anova(insects.m2) %>% print()
+```
+The mean log of insect count plus 1 significantly differs among spray types (ANOVA, F = 46.007, df = 5, p < 0.0001).
+
+# Non-parametric ANOVA alternative
+
+## Kruskal-Wallis test
+
+Works like `aov()` and `anova()` combined
+
+Uses the formula interface like `aov()`, but there's no need to save the model and run `anova()`
+
+```{r}
+kruskal.test(count ~ spray, data = InsectSprays)
+```
+
+Insect count differs significantly by spray type (Kruskal-Wallis test, X^2^ = 54.691, df = 5, p < 0.0001)
+
+# Homework time!
+

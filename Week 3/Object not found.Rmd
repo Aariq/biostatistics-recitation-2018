@@ -1,0 +1,19 @@
+---
+title: "Knitting Error 2"
+subtitle: 'object not found'
+output:
+  word_document: default
+  html_notebook: default
+---
+
+This will give an "object not found" error because you haven't created `ctrees` yet:
+
+
+
+```{r}
+ctrees <- read.csv("data/Cambridge Trees.csv")
+```
+
+```{r}
+head(ctrees)
+```

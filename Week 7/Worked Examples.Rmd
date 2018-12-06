@@ -1,0 +1,65 @@
+---
+title: "Week 7 Worked t-test"
+output: html_notebook
+---
+
+# 1. Spooky Oaks
+
+## Read in data
+
+```{r}
+oaks <- read.csv("data/oaks.csv")
+str(oaks)
+```
+
+1. State hypotheses
+
+H~0~: Park tree and cemetery tree diameters have the same population mean
+H~A~: Park tree and cemetery tree diameters have different population means
+
+H~0~: µ~1~ = µ~2~
+H~A~: µ~1~ ≠ µ~2~
+
+
+2. Choose Test
+Two-sample two-tailed t-test. We are comparing two independent groups and looking for difference in either direction.
+
+```{r}
+oaks
+t.test(diameter ~ Location, data = oaks)
+```
+
+3. t = 1.83
+4. p = 0.0776
+5. We fail to reject the null hypothesis
+
+6. Mean oak tree diameters did not differ significantly between park and cemetery populations (two-sample two-tailed t-test, df = 30.474, t = 1.83, p = 0.0776).
+
+
+
+
+
+## 2. Learn more about power!
+
+1. If you want to detect a medium effect size (d = 0.5) with power = 0.8 and a typical alpha of 0.05, what is the minimum sample size should you should have? (two-tailed, two sample t-test)
+
+```{r}
+pwr.t.test(d = 0.5, power = 0.8)
+```
+**64**
+
+2. How big of an effect size (d) can you detect with a power of 0.6 and a sample size of 20 in a paired t-test?
+
+```{r}
+pwr.t.test(n = 20, power = 0.6)
+```
+**0.71**
+
+3. Which has greater power, an independent two sample t-test or a paired t-test?
+
+```{r}
+pwr.t.test(n = 30, d = 0.5)
+
+pwr.t.test(n = 30, d = 0.5, type = "paired")
+```
+**Paired t-test**

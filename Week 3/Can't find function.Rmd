@@ -1,0 +1,22 @@
+---
+title: "Knitting Error 1"
+subtitle: "Could not find function..."
+output:
+  word_document: default
+---
+
+This will fail if you don't load `dplyr` **first**.  You'll get a "can't find function" error because `%>%` is part of the `dplyr` package, and it isn't loaded.
+
+```{r}
+library(dplyr)
+chickwts %>% 
+  summarize(mean = mean(weight))
+```
+
+```{r}
+chickwts %>% 
+  group_by(feed) %>% 
+  summarize(mean = mean(weight))
+```
+
+

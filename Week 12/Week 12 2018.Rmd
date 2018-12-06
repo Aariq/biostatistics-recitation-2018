@@ -1,0 +1,317 @@
+---
+title: "Regression"
+author: "Avalon C.S. Owens, Eric R. Scott"
+date: "11/30/2018"
+output:
+  beamer_presentation: default
+  ioslides_presentation:
+    df_print: paged
+    widescreen: yes
+---
+
+
+```{r include = F}
+library(tidyverse)
+library(ggthemes)
+```
+
+## Load in ur stuff!
+
+```{r message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+lion <- read.csv("LionAge.csv")
+head(lion)
+```
+
+## Plan for today
+
+- Setting up a regression model with `lm()`
+- Checking your regression assumptions
+    - Residuals plots
+    - Normal probability plots
+- Doing a regression test with `summary()`
+- Plotting best-fit lines with `geom_smooth()`
+
+## A review of correlation
+
+```{r}
+ggplot(lion, aes(x = proportion.black, y = age)) + 
+  geom_point() + theme_dark() + labs(x = "Proportion black on nose", y = "Age (yrs)")
+```
+
+## A review of correlation
+
+```{r}
+cor <- cor.test(lion$proportion.black, lion$age, method = "pearson")
+cor$estimate #Pearson correlation coefficient
+cor$estimate^2 #R-squared
+```
+
+## Setting up a regression model with `lm()`
+
+$Y = \alpha + \beta*X$
+
+```{r}
+lion.model <- lm(age ~ proportion.black, data = lion) #lm stands for linear model
+lion.model
+```
+
+## Setting up a regression model with `lm()`
+
+Make your own regression model! 
+
+See if you can predict tree girth as a function of tree height
+
+```{r echo=F}
+ggplot(trees, aes(x = Height, y = Girth)) + 
+  geom_point() + theme_dark() + labs(x = "Tree height (ft)", y = "Tree diameter (in)")
+```
+
+## Setting up a regression model with `lm()`
+
+Make your own regression model! 
+
+```{r}
+tree.model = lm(Girth ~ Height, data = trees)
+tree.model
+```
+
+## Checking your regression assumptions (17.5)
+
+1. LINEARITY: a true linear relationship between $X$ and $Y$ in the underlying population, such that $Y = \alpha + \beta*X$
+
+2. NORMALITY: at every value of $X$, $Y$ is normally distributed
+
+3. VARIANCE: at each value of $X$, the variance of $Y$ is equal
+
+# Residuals plots
+
+## Checking your regression assumptions
+
+```{r echo=FALSE}
+df <- data.frame(x = 1:20 + rnorm(20), y = 1:20 + rnorm(20))
+
+df.fitted <-
+  lm(y ~ x, data = df) %>%
+  fortify() %>%
+  mutate(ID = 1:20)
+
+ggplot(df.fitted, aes(x = x , y = y)) +
+  geom_point() +
+  geom_line(aes(x = x, y = .fitted), color = "red") +
+  geom_segment(aes(x = x, y = .fitted, xend = x, yend = .fitted + .resid))
+```
+
+## Checking your regression assumptions
+
+```{r}
+fortify(lion.model)
+```
+
+## Checking your regression assumptions
+
+```{r}
+ggplot(fortify(lion.model), aes(x = proportion.black, y = .resid)) + 
+  geom_point()
+```
+
+## Checking your regression assumptions
+
+```{r}
+ggplot(fortify(lion.model), aes(x = proportion.black, y = .resid)) + 
+  geom_point() + geom_hline(yintercept = 0)
+```
+
+## Checking your regression assumptions
+
+```{r}
+ggplot(fortify(lion.model), aes(x = proportion.black, y = .resid)) + 
+  geom_point() + geom_hline(yintercept = 0, color = "red")
+```
+
+## Checking your regression assumptions
+
+```{r}
+ggplot(fortify(lion.model), aes(x = proportion.black, y = .resid)) + 
+  geom_point() + geom_hline(yintercept = 0, color = "red") +
+  labs(x = "Proportion black on nose", y = "Residuals")
+```
+
+## Checking your regression assumptions
+
+Check the assumptions of your regression model with a plot of your own!
+
+```{r echo=F}
+ggplot(trees, aes(x = Height, y = Girth)) + 
+  geom_point() + theme_dark() + labs(x = "Tree height (ft)", y = "Tree diameter (in)")
+```
+
+## Checking your regression assumptions
+
+```{r}
+ggplot(tree.model, aes(x = Height, y = .resid)) + 
+  geom_point() + geom_hline(yintercept = 0, color = "red") +
+  labs(x = "Height (ft)", y = "Residuals")
+```
+
+# Normal probability plots
+
+## Checking your regression assumptions
+
+```{r}
+ggplot(fortify(lion.model), aes(sample = .resid)) + 
+  geom_qq()
+```
+
+## Checking your regression assumptions
+
+```{r}
+ggplot(fortify(lion.model), aes(sample = .resid)) + 
+  geom_qq() + geom_qq_line()
+```
+
+## Checking your regression assumptions
+
+```{r}
+ggplot(fortify(lion.model), aes(sample = .resid)) + 
+  geom_qq() + geom_qq_line() +  coord_flip()
+```
+
+## Checking your regression assumptions
+
+Check the assumptions of your regression model with a plot of your own!
+
+```{r echo=F}
+ggplot(trees, aes(x = Height, y = Girth)) + 
+  geom_point() + theme_dark() + labs(x = "Tree height (ft)", y = "Tree diameter (in)")
+```
+
+## Checking your regression assumptions
+
+```{r}
+ggplot(tree.model, aes(sample = .resid)) + 
+  geom_qq() + geom_qq_line(color = "darkgreen") + coord_flip()
+```
+
+## Checking your regression assumptions
+
+```{r}
+ggplot(fortify(lion.model), aes(sample = .resid)) + 
+  geom_qq() + geom_qq_line() + coord_flip()
+```
+
+## Transforming your data 
+
+```{r}
+lion.2 <- lion %>% mutate(age.2 = log(age))
+lion.2
+```
+
+## Transforming your data 
+
+```{r}
+lion.king.2 <- lm(age.2 ~ proportion.black, data = lion.2) #lm stands for linear model
+lion.king.2
+```
+
+## Re-checking your regression assumptions
+
+```{r}
+ggplot(fortify(lion.model), aes(sample = .resid)) + 
+  geom_qq() + geom_qq_line() + coord_flip()
+```
+
+## Re-checking your regression assumptions
+
+```{r}
+ggplot(fortify(lion.king.2), aes(sample = .resid)) + 
+  geom_qq() + geom_qq_line() + coord_flip()
+```
+
+## Doing a regression test with `summary()`
+
+```{r}
+summary(lion.model)
+```
+
+## Doing a regression test with `summary()`
+
+```{r}
+summary(lion.king.2)
+```
+
+# FYI...
+
+## FYI...
+
+You can also perform a regression test on a linear model with `anova()`
+
+```{r paged.print=FALSE}
+anova(lion.king.2)
+```
+
+## FYI...
+
+You can calculate 95% confidence intervals for the slope using `confint()`
+
+```{r}
+confint(lion.king.2)
+```
+
+## Doing a regression test with `summary()`
+
+Do a regression test of your own on your regression model!
+
+Use the coefficients from the model to write the linear equation
+
+```{r echo = F}
+ggplot(trees, aes(x = Height, y = Girth)) + 
+  geom_point() + theme_dark() + labs(x = "Tree height (ft)", y = "Tree diameter (in)")
+```
+
+## Doing a regression test with `summary()`
+
+```{r}
+summary(tree.model)
+```
+
+
+## Plotting best-fit lines with `geom_smooth()`
+
+```{r}
+ggplot(trees, aes(x = Height, y = Girth)) + 
+  geom_point() + theme_dark() + labs(x = "Tree height (ft)", y = "Tree diameter (in)")
+```
+
+## Plotting best-fit lines with `geom_smooth()`
+
+```{r}
+ggplot(trees, aes(x = Height, y = Girth)) + geom_smooth(method = "lm") +
+  geom_point() + theme_dark() + labs(x = "Tree height (ft)", y = "Tree diameter (in)")
+```
+
+## Plotting best-fit lines with `geom_smooth()`
+
+```{r}
+cool <- ggplot(trees, aes(x = Height, y = Girth)) + 
+  geom_smooth(method = "lm", 
+              level = 0.99,
+              color = "dodgerblue", 
+              fill = "pink") +
+  geom_point(shape = 8, size = 2.5, color = "darkorange") + theme_economist() +
+  labs(x = "Tree height (ft)", 
+       y = "Tree diameter (in)", 
+       title = "The coolest plot ever", 
+       subtitle = "Aren't trees great?",
+       caption = "Purple bands show 99% confidence interval")
+```
+
+## Plotting best-fit lines with `geom_smooth()`
+
+```{r}
+cool
+```
+
+# Changing figure sizes in R chunks
+

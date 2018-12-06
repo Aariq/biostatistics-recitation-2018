@@ -1,0 +1,140 @@
+---
+title: "Recitation Week 9: In-Class"
+output: html_notebook
+---
+
+Packages we'll use today:
+```{r load packages}
+library(ggplot2)
+library(ggformula)
+library(dplyr)
+```
+
+```{r}
+bees <- read.csv("BeeNectar.csv")
+bees
+```
+
+```{r fig.height=3, fig.width=3}
+boxplot(ITS ~ Colony, data = bees)
+```
+
+# Review
+
+```{r}
+summary(bees)
+```
+
+```{r}
+bees$Colony <- as.factor(bees$Colony)
+summary(bees)
+```
+Replaces Colony column with factor version
+
+```{r}
+bees %>% 
+  group_by(Colony) %>% 
+  summarise(mean.ITS = mean(ITS, na.rm = TRUE),
+            median.ITS = median(ITS, na.rm = TRUE),
+            SEM.ITS = sd(ITS, na.rm = TRUE)/sqrt(n()),  #does na.rm affect sample size?
+            sample.size = n(),
+            var.ITS = var(ITS, na.rm = TRUE),
+            NAs = anyNA(ITS))
+
+```
+
+```{r}
+bees <- subset(bees, Colony != "22")
+bees %>% select(-ITS) #remove just ITS
+select(bees, -ITS)
+
+
+bees[ ,1:3] #keep only columns 1-3
+```
+
+
+## Plotting
+
+```{r}
+boxplot(ITS ~ Colony, data = bees) #ITS as explained by "Colony"
+levels(bees$Colony)
+```
+```{r}
+ggplot(bees, aes(x = Colony, y = Nectar)) +
+  geom_boxplot()
+```
+
+```{r}
+ggplot(bees, aes(x = ITS)) +
+  geom_histogram(bins = 8) +
+  facet_wrap("Colony")
+```
+
+
+
+```{r}
+bees.aov <- aov(ITS ~ Colony, data = bees)
+head(bees.aov$residuals) #shows only first 6 values/rows
+#bees.aov$residuals
+
+```
+
+
+```{r}
+shapiro.test(bees.aov$residuals)
+```
+NOT NORMAL
+
+```{r}
+x <- c(1,2,3)
+x
+y <- c("a", "b", "c")
+y
+
+
+data.frame(First = x, Second = y)
+```
+```{r}
+bee.resids <- data.frame(residuals = bees.aov$residuals)
+```
+
+```{r}
+ggplot(bee.resids, aes(x = residuals)) +
+  geom_histogram(bins = 8)
+
+ggplot(bees, aes(x = ITS)) +
+  geom_histogram(bins = 8)
+```
+
+
+```{r}
+ggplot(bee.resids, aes(sample = residuals)) +
+  geom_qq() +
+  stat_qqline() +
+  coord_flip()
+```
+
+
+
+```{r}
+qqnorm(bee.resids$residuals, datax = TRUE)
+qqline(bee.resids$residuals, datax = TRUE)
+```
+
+```{r}
+bees.aov
+anova(bees.aov)
+```
+p < 0.0001
+
+```{r}
+kruskal.test(ITS ~ Colony, data = bees)
+```
+
+
+ - Break up exercises into smaller pieces
+ - Start exercises in class, post key
+ 
+
+
+

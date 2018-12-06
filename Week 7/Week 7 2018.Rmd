@@ -1,0 +1,178 @@
+---
+title: "Power Analysis in R"
+author: "Avalon C.S. Owens, Eric R. Scott"
+date: "10/12/2018"
+output:
+  pdf_document: 
+    latex_engine: xelatex
+  ioslides_presentation: default
+---
+
+```{r include=FALSE}
+library(emo)
+library(pwr)
+library(dplyr)
+```
+
+## Setup for today
+
+- install the `pwr` package `r ji("package")`
+- make a notebook and load it with `library(pwr)`
+- download *oaks.csv* from Canvas and read it in with `read.csv()`
+
+## Overview
+
+- A note on citing packages `r ji("package")`
+- Review 6-step hypothesis testing procedure
+- Power analysis in R
+
+# Citing R Packages
+
+## Citing R Packages `r ji("package")`
+
+- R packages are made by people!
+- You can (and should) cite packages just like you would cite a scientific paper
+- Find the citation with `citation()`
+
+## Citing R Packages
+
+"Power analyses were conducted with the *pwr* package in R (Champley 2018)."
+
+```{r}
+citation("pwr")
+```
+
+
+# Hypothesis testing
+
+## Hypothesis testing
+
+Whenever you are asked to test a hypothesis in this class, you **must** use the 6-step hypothesis testing procedure (unless we say otherwise).
+
+1. Hypothesis
+
+2. Choose and justify the test
+
+3--5. Do the test! (in R)
+
+6\. Summary statement
+
+## Exercise 1
+
+The city of Cambridge collects data on all city trees including location, diameter (in cm), and species.  These data are made available on [data.cambridgema.gov](https://data.cambridgema.gov/browse).  I downloaded the data and randomly sampled 20 oak trees growing in parks and 20 oak trees growing in cemeteries.  The data are available on Canvas.
+
+**Test the hypothesis that oak trees grown in parks have a different diameter than oak trees grown in cemeteries.**
+
+
+
+# Power Analysis
+
+## `pwr` package
+
+The `pwr` package has power analyses for many different tests:
+
+- Two proportions/binomial, `pwr.2p.test()`
+- T-tests, `pwr.t.test()`
+- Chi-squared test, `pwr.chisq.test()`
+- One way ANOVA, `pwr.anova.test()`
+- Linear models, `pwr.f2.test()`
+- Correlation, `pwr.r.test()`
+
+## Power of a t-test
+
+`pwr.t.test()` has 4 required arguments.  Define 3 of the 4 of them, and it will calculate and return the 4th
+
+- `n` - sample size
+- `d` - effect size
+- `sig.level` - type I error probability (default 0.05)
+- `power` - power of test
+
+## Power of a t-test
+
+Additional arguments define the type of t-test:
+
+- `type` - one-sample, two-sample, or paired-sample t-test?
+- `alternative` - same as in `t.test()`
+
+## Power of a t-test
+
+If we want to know the **power** of a test, what information do you need to supply to `pwr.t.test()`?
+
+```{r, eval=FALSE}
+pwr.t.test(n = ,
+           d = ,
+           sig.level = ,
+           power = )
+```
+
+## Power of a t-test
+
+```{r}
+pwr.t.test(n = 15, d = 0.5, sig.level = 0.05) # power = ?
+```
+
+
+## Estimating required sample size
+
+If you want to know the **sample size** required to detect a difference at some power, what do you need to supply to `pwr.t.test()`?
+
+```{r, eval=FALSE}
+pwr.t.test(n = ,
+           d = ,
+           sig.level = ,
+           power = )
+```
+
+
+## Estimating required sample size
+
+```{r}
+pwr.t.test(d = 0.6, power = 0.8, sig.level = 0.05) # n = ?
+```
+
+## Power to detect differences in oaks
+
+What is the power of the t-test we did to detect a difference between park and cemetery oaks?
+
+- `n` = ?
+- `sig.level` = ?
+- `d` = ?
+
+$$
+d = \frac{\mid{\mu_1 - \mu_2}\mid}{\sigma}
+$$
+Estimate!
+
+## Estimating parameters for `pwr.t.test`
+
+```{r}
+oaks <- read.csv("data/oaks.csv")
+oaks %>% group_by(Location) %>% summarize(mean = mean(diameter), n = n())
+
+d.est = (19.85 - 12.85)/sd(oaks$diameter)
+d.est
+```
+
+- Is this a large or small effect size?
+
+## Power analysis
+
+```{r}
+pwr.t.test(n = 20, d = d.est)
+```
+
+- Is this a lot of power?
+- What is the probability we made a type II error?
+- What could you do to increase your power?
+
+## Learn more about power!
+
+1. If you want to detect a medium effect size (d = 0.5) with power = 0.8 and a typical alpha of 0.05, what is the minimum sample size should you should have? (two-tailed, two sample t-test)
+
+
+
+2. How big of an effect size (d) can you detect with a power of 0.6 and a sample size of 20 in a paired t-test?
+
+
+3. Which has greater power, an independent two sample t-test or a paired t-test?
+

@@ -1,0 +1,177 @@
+---
+title: "Recitation Week 1 Notes"
+output:
+  html_notebook: default
+  pdf_document: default
+---
+## Welcome to Recitation (Natalie)
+On powerpoint slides:
+
+ - Format of class
+ - Expectations
+    - **collaborate** (help others, ask others for help)
+    - be respectful to eachother
+    - ask questions
+    - tell us if we need to pause, slow down, repeat ourselves (we haven't been beginners for a long time)
+
+## Orientation to RStudio (Natalie)
+
+ - Console
+ - Environment
+ - Help pane
+
+## Exercises to do directly in console (Natalie)
+```{r}
+#R does math
+5+5
+12/2
+44*15
+10^10
+```
+Introduce functions with `sqrt()` or `log()`
+```{r}
+sqrt(45)
+```
+
+Introduce assignment to objects
+```{r}
+x <- 5
+5+x
+x^x
+sqrt(x)
+
+x <- "biostats"
+x
+
+#vectors
+x <- c(1, 2, 3, 4, 5, 25)
+```
+
+What happens if you do math to a vector?
+```{r}
+x * 3
+```
+
+Demonstrate how commented lines work
+```{r}
+x
+#x
+```
+
+## Getting Help
+Four ways:
+
+ - `help(mean)`
+ - `?mean`
+ - search box in help pane
+ - Google (stackexchange results especially)
+```{r}
+help(mean) # help("function") will retrieve the manual and help file for that function
+?mean      # ?"function" will do the same as help()
+```
+
+## R Notebooks (Eric)
+We'll go over the anatomy and use of an R notebook in recitation and the rest of the exercises will be done in code chunks of an R notebook.
+
+Things to cover:
+ - header and how to edit title and author names
+ - text vs. code chunks
+ - running code in a chunk (run button/shortcut or "play" button)
+ - inserting a new chunk
+ - knitting to Word doc
+
+## Data Entry (Eric)
+Before uploading data, you have to have all files in the same folder as this notebook for this code to run. 
+
+```{r}
+read.csv("SpiderAmputation.csv") # uploads your data
+```
+But if you want it to stick around, you need to assign to an object!
+
+```{r}
+data <- read.csv("SpiderAmputation.csv")
+#or call it whatever you want
+data
+```
+
+Always a good idea to check your data to make sure it loaded correctly
+```{r}
+head(data) # will call up the first 6 rows of your data frame
+tail(data) # will call up the last 6 rows of your data frame
+data[1:10, ] # data[rows, columns] therefore data[1:10, ] will call up rows 1 to 10, and all columns 
+```
+
+Other ways to check your data
+```{r}
+str(data) # shows what kind of data is in each column (character, integer, etc.). Helpful for spotting data entry errors
+dim(data) # the dimensions of your data frame
+nrow(data) # number of rows
+ncol(data) # number of columns
+length(data[ , 1]) # length of a vector or column in your data frame. You will have to specify the column if it is a data frame.
+```
+You can see the objects you've created in the Environment panel
+
+## Descriptive Stats (Natalie)
+
+```{r}
+summary(data$speed)
+
+mean(data$speed)
+sd(data$speed)
+var(data$speed)
+min(data$speed)
+max(data$speed)
+range(data$speed) # IMPORTANT: in this class, "range" is a single value (min - max)
+
+before<-subset(data, treatment=="before")
+mean(before$speed)
+
+after<-subset(data, treatment=="after")
+mean(after$speed)
+```
+
+## Plotting (Eric)
+Histograms
+```{r}
+#histograms only require specification of an x axis because the y axis is always frequency
+hist(data$speed, xlab = "Speed", main = NULL)
+```
+Boxplots
+```{r}
+boxplot(data$speed, ylab = "Speed")
+#If you want multiple boxplots side-by-side for different treatments, specify an x and y axis using a formula
+boxplot(data$speed ~ data$treatment, xlab = "Treatment", ylab = "Speed")
+```
+
+## In-Class Exercise (Natalie)
+ - on slides
+
+
+
+## Common problems encountered in recitation
+
+
+1. Remember to save your notebook in the same file that you saved your data. You may need to restart R Studio if you opened up the notebook in a different file
+
+2. Thinking that your new subsetted dataframe is a vector
+
+```{r}
+
+data$after # this does not work since both "data" (containing both after and before treatment) and "after" (containing only after) are both dataframes. there is no "after" vector in "data"
+
+# Instead you should do this:
+
+data$speed
+mean(data$speed)
+
+after$speed
+mean(after$speed)
+
+
+
+
+
+```
+
+
+
