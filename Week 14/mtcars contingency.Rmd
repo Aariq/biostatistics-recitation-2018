@@ -1,0 +1,53 @@
+---
+title: "Contingency analysis for mtcars"
+output: html_notebook
+---
+```{r}
+library(tidyverse)
+library(ggmosaic)
+```
+
+Is # of gears contingent on transmission type (automatic or manual?)
+
+```{r}
+str(mtcars)
+```
+
+`gear` is number of gears and `am` is transmission type.  According to the help file for `mtcars`, 0=automatic and 1=manual.
+
+Both of these columns are numeric, so we need to convert them to factors in order to do any categorical data analysis.  We'll do that with `mutate()` and `as.factor()`
+
+```{r}
+mtcars2 <- #save as new object
+  mtcars %>% 
+  mutate(gear = as.factor(gear), #overwrite gear and am columns with factor versions
+         am = as.factor(am)) %>% 
+  mutate(am = forcats::fct_recode(am, manual = "1", automatic = "0")) # rename the levels of am so we don't have to remember what 0 and 1 mean
+
+str(mtcars2)
+```
+
+After we've converted the columns to factors, we can make a contingency table
+
+```{r}
+mtcars.table <- table(transmission = mtcars2$am, gearnum = mtcars2$gear)
+mtcars.table %>% addmargins()
+```
+It looks like automatic transmissions tend to have fewer gears!
+
+Then we can do contingency analysis
+```{r}
+chisq.test(mtcars.table)
+```
+Looks like # of gears is contingent on transmission type
+
+
+Then we can visualize the data with a mosaic plot
+```{r}
+ggplot(mtcars2) +
+  geom_mosaic(aes(x = product(am, gear), fill = am)) +
+  scale_fill_manual("Transmission Type:", values = c("blue4", "gold2")) + #changes the colors and legend name
+  labs(x = "Number of Gears", y = "Transmission Type") + # adds labels
+  theme_minimal() #adds a theme
+```
+

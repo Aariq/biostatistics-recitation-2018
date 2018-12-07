@@ -95,7 +95,7 @@ chisq.test(Obs, p = props, rescale.p = TRUE)
 
 ## G test
 
-- The package we installed for Dunnnett's Test also has a G-test function!
+- The package we installed for Dunnett's Test also has a G-test function!
 
 - Unlike `chisq.test()`, you *must* supply expected **probabilities**.
 
@@ -278,6 +278,7 @@ chisq.test(angina.table)
 
 ## G-test
 - `GTest()` function from the `DescTools` package
+
 ```{r}
 GTest(worm.table)
 ```
@@ -386,7 +387,6 @@ ggplot(df2 %>% filter(x > 0, y > 0), aes(x = x, y = y, color = group)) +
 
 - Make customized web pages, PDFs, presentations, etc. in RStudio with [R Markdown](https://bookdown.org/yihui/rmarkdown/)
 - Make a website in RStudio with [blogdown](https://bookdown.org/yihui/blogdown/)
-    
 
 ## Interactive plots!
 
