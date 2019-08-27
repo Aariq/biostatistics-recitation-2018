@@ -6,6 +6,8 @@ The following year (this repo) I co-taught the course with Avalon Owens and we t
 
 Feel free to fork and edit to use for your own course. If you notice mistakes or have suggestions for improvement, please file an issue.
 
+I also re-worked all the problem sets to be done in RMarkdown documents.  These are hosted in a separate, private repository, but please feel free to contact me if you are interested in modifying them for your own use.
+
 
 ## Update 2019-08-27
 
