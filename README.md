@@ -19,3 +19,7 @@ The R ecosystem moves fast, so here are some things I've learned about that migh
 
 - This really amazing way of explaining RStudio panes from [@RLadiesNCL](https://twitter.com/RLadiesNCL/status/1138812826917724160):
 ![](https://pbs.twimg.com/media/D83d2-dW4AULriR?format=jpg&name=medium)
+
+## Update 2020-01-30
+
+rstudio::conf2020 is happening right now, and one of the presentations was on the new [flipbookr](https://github.com/EvaMaeRey/flipbookr) package, which seems AMAZING for teaching R coding.  It looks like it currently works with [xaringan](https://cran.r-project.org/web/packages/xaringan/index.html) slides.
